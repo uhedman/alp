@@ -20,8 +20,3 @@ run: build
 include testing.mk
 test: build vm
 	$(MAKE) test_all
-
-vm:
-	$(MAKE) -C vm
-
-.PHONY: vm

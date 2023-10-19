@@ -1,19 +1,19 @@
 cabal-version:      2.4
-name:               compiladores2023
+name:               prooftheorem
 version:            0.1.0.2023
 
 -- A short (one-line) description of the package.
-synopsis:           Código fuente para la materia Compiladores (FCEIA/UNR)
+synopsis:           Código de trabajo final para la materia ALP (FCEIA/UNR)
 
 -- A longer description of the package.
 -- description:
 
-homepage:       https://github.com/ compiladores-lcc/compiladores#readme
-bug-reports:        https://github.com/ compiladores-lcc/compiladores/issues
+homepage:       https://github.com/uhedman/alp#readme
+bug-reports:        https://github.com/uhedman/alp/issues
 
-author:         Mauro Jaskelioff y Guido Martinez
-maintainer:     mauro@fceia.unr.edu.ar
-copyright:      2020 Mauro Jaskelioff y Guido Martinez
+author:         Ulises Hedman
+maintainer:     ulyhedman@hotmail.com
+copyright:      2023 Ulises Hedman
 license-file:   LICENSE
 
 -- category:
@@ -21,14 +21,11 @@ extra-source-files:
     ChangeLog.md
     README.md
 
-executable compiladores2023
+executable prooftheorem
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
     other-modules:
-        Bytecompile
-        Bytecompile8
-        CEK
         Common
         Elab
         Errors
