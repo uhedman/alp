@@ -2,12 +2,11 @@
 
 {-|
 Module      : Main
-Description : Compilador de FD4.
-Copyright   : (c) Mauro Jaskelioff, Guido Martínez, 2020.
+Description : Demostrador de teoremas.
+Copyright   : (c) Ulises Hedman, 2023.
 License     : GPL-3
-Maintainer  : mauro@fceia.unr.edu.ar
+Maintainer  : ulyhedman@hotmail.com
 Stability   : experimental
-
 -}
 
 module Main where
@@ -29,15 +28,12 @@ import Options.Applicative
 import Global
 import Errors
 import Lang
-import Parse ( P, tm, program, declOrTm, runP )
+import Parse ( P, form, runP )
 import Elab ( elab, elabDecl )
 import Eval ( eval )
 import PPrint ( pp , ppTy, ppDecl )
 import MonadFD4
 import TypeChecker ( tc, tcDecl )
-import CEK ( evalCEK )
-import Bytecompile ( runBC, bytecompileModule, bcWrite, bcRead )
-import System.FilePath ( dropExtension )
 
 prompt :: String
 prompt = "FD4> "
@@ -45,44 +41,28 @@ prompt = "FD4> "
 
 
 -- | Parser de banderas
-parseMode :: Parser (Mode,Bool,Bool)
-parseMode = (,,) <$>
-      (flag' Typecheck ( long "typecheck" <> short 't' <> help "Chequear tipos e imprimir el término")
-      <|> flag' Bytecompile (long "bytecompile" <> short 'm' <> help "Compilar a la BVM")
-      <|> flag' RunVM (long "runVM" <> short 'r' <> help "Ejecutar bytecode en la BVM")
+parseMode :: Parser Mode
+parseMode = flag' Typecheck ( long "typecheck" <> short 't' <> help "Chequear tipos e imprimir el término")
       <|> flag Interactive Interactive (long "interactive" <> short 'i' <> help "Ejecutar en forma interactiva")
       <|> flag Eval        Eval        (long "eval" <> short 'e' <> help "Evaluar programa")
-  -- <|> flag' CC ( long "cc" <> short 'c' <> help "Compilar a código C")
-  -- <|> flag' Canon ( long "canon" <> short 'n' <> help "Imprimir canonicalización")
-  -- <|> flag' Assembler ( long "assembler" <> short 'a' <> help "Imprimir Assembler resultante")
-  -- <|> flag' Build ( long "build" <> short 'b' <> help "Compilar")
-      )
-   <*> pure False
-   <*> flag False True (long "cek" <> short 'k' <> help "Utilizar la CEK")
-   -- reemplazar por la siguiente línea para habilitar opción
-   -- <*> flag False True (long "optimize" <> short 'o' <> help "Optimizar código")
 
 -- | Parser de opciones general, consiste de un modo y una lista de archivos a procesar
-parseArgs :: Parser (Mode,Bool,Bool, [FilePath])
-parseArgs = (\(a,b,b') c -> (a,b,b',c)) <$> parseMode <*> many (argument str (metavar "FILES..."))
+parseArgs :: Parser (Mode, [FilePath])
+parseArgs = (,) <$> parseMode <*> many (argument str (metavar "FILES..."))
 
 main :: IO ()
 main = execParser opts >>= go
   where
     opts = info (parseArgs <**> helper)
       ( fullDesc
-     <> progDesc "Compilador de FD4"
-     <> header "Compilador de FD4 de la materia Compiladores 2022" )
+     <> progDesc "Demostrador de teoremas"
+     <> header "Demostrador de teoremas de la materia ALP 2023" )
 
-    go :: (Mode,Bool,Bool,[FilePath]) -> IO ()
-    go (Interactive,opt,cek,files) =
-              runOrFail (Conf opt cek Interactive) (runInputT defaultSettings (repl files))
-    go (Bytecompile,opt,cek,files) =
-              runOrFail (Conf opt cek RunVM) $ mapM_ bytecompileFile files
-    go (RunVM,opt,cek,files) =
-              runOrFail (Conf opt cek RunVM) $ mapM_ runVMFile files
-    go (m,opt,cek, files) =
-              runOrFail (Conf opt cek m) $ mapM_ compileFile files
+    go :: (Mode,[FilePath]) -> IO ()
+    go (Interactive,files) =
+              runOrFail (Conf Interactive) (runInputT defaultSettings (repl files))
+    go (m, files) =
+              runOrFail (Conf m) $ mapM_ compileFile files
 
 runOrFail :: Conf -> FD4 a -> IO a
 runOrFail c m = do
@@ -122,20 +102,6 @@ loadFile f = do
     setLastFile filename
     parseIO filename program x
 
-runVMFile ::  MonadFD4 m => FilePath -> m ()
-runVMFile f = do bc <- liftIO $ bcRead f
-                 runBC bc
-
-bytecompileFile :: MonadFD4 m => FilePath -> m ()
-bytecompileFile f = do
-  decls <- loadFile f
-  tds <- mapM aux decls
-  bc <- bytecompileModule tds
-  liftIO $ bcWrite bc (dropExtension f ++ ".bc32") -- liftIO?
-    where aux d = do td <- typecheckDecl d
-                     addDecl td
-                     return td
-
 compileFile ::  MonadFD4 m => FilePath -> m ()
 compileFile f = do
     i <- getInter
@@ -156,12 +122,6 @@ evalDecl (Decl p x e) =
      return $ Decl p x e'
 evalDecl (DeclTy p n t) = return $ DeclTy p n t
 
-evalDeclCek :: MonadFD4 m => Decl TTerm -> m (Decl TTerm)
-evalDeclCek (Decl p x e) = 
-  do e' <- evalCEK e
-     return $ Decl p x e'
-evalDeclCek (DeclTy p n t) = return $ DeclTy p n t
-
 typecheckDecl :: MonadFD4 m => SDecl STerm -> m (Decl TTerm)
 typecheckDecl decl = 
   do decl' <- elabDecl decl
@@ -175,8 +135,7 @@ handleDecl d = do
               dd <- typecheckDecl d
               case dd of
                 (Decl p x tt) -> do
-                  cek <- getCek
-                  te <- if cek then evalCEK tt else eval tt
+                  te <- eval tt
                   addDecl (Decl p x te)
                 (DeclTy p x ty) -> do
                   addTy x ty
@@ -185,17 +144,12 @@ handleDecl d = do
               printFD4 ("Chequeando tipos de "++f)
               td <- typecheckDecl d
               addDecl td
-              -- opt <- getOpt
-              -- td' <- if opt then optimize td else td
-              ppterm <- ppDecl td  --td'
+              ppterm <- ppDecl td
               printFD4 ppterm
           Eval -> do
               td <- typecheckDecl d
-              -- td' <- if opt then optimizeDecl td else return td
-              cek <- getCek
-              ed <- if cek then evalDeclCek td else evalDecl td
+              ed <- evalDecl td
               addDecl ed
-          _ -> return ()
 
 data Command = Compile CompileForm
              | PPrint String
@@ -274,7 +228,7 @@ handleCommand cmd = do
 
 compilePhrase ::  MonadFD4 m => String -> m ()
 compilePhrase x = do
-    dot <- parseIO "<interactive>" declOrTm x
+    dot <- parseIO "<interactive>" form x
     case dot of
       Left d  -> handleDecl d
       Right t -> handleTerm t
@@ -284,8 +238,7 @@ handleTerm t = do
          t' <- elab t
          s <- get
          tt <- tc t' (tyEnv s)
-         cek <- getCek
-         te <- if cek then evalCEK tt else eval tt
+         te <- eval tt
          ppte <- pp te
          printFD4 (ppte ++ " : " ++ ppTy (getTy tt))
 

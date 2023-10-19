@@ -19,22 +19,14 @@ y la mónada 'FD4' que provee una instancia de esta clase.
 module MonadFD4 (
   FD4,
   runFD4,
-  lookupDecl,
-  lookupTy,
   printFD4,
   printStrFD4,
   setLastFile,
   getLastFile,
   setInter,
   getInter,
-  getMode,
-  getOpt,
-  getCek,
-  eraseLastFileDecls,
   failPosFD4,
   failFD4,
-  addDecl,
-  addTy,
   catchErrors,
   MonadFD4,
   module Control.Monad.Except,
@@ -42,12 +34,10 @@ module MonadFD4 (
  where
 
 import Common
-import Lang
 import Global
 import Errors ( Error(..) )
 import Control.Monad.State
 import Control.Monad.Except
-import Control.Monad.Reader
 import System.IO
 
 -- * La clase 'MonadFD4'
@@ -67,16 +57,7 @@ y otras operaciones derivadas de ellas, como por ejemplo
    - @modify :: (GlEnv -> GlEnv) -> m ()@
    - @gets :: (GlEnv -> a) -> m a@  
 -}
-class (MonadIO m, MonadState GlEnv m, MonadError Error m, MonadReader Conf m) => MonadFD4 m where
-
-getOpt :: MonadFD4 m => m Bool
-getOpt = asks opt
-
-getCek :: MonadFD4 m => m Bool
-getCek = asks cek
-
-getMode :: MonadFD4 m => m Mode
-getMode = asks modo
+class (MonadIO m, MonadState GlEnv m, MonadError Error m) => MonadFD4 m where
 
 setInter :: MonadFD4 m => Bool -> m ()
 setInter b = modify (\s-> s {inter = b})
@@ -91,39 +72,10 @@ printStrFD4 :: MonadFD4 m => String -> m ()
 printStrFD4 = liftIO . putStr
 
 setLastFile :: MonadFD4 m => FilePath -> m ()
-setLastFile filename = modify (\s -> s {lfile = filename , cantDecl = 0})
+setLastFile filename = modify (\s -> s {lfile = filename})
 
 getLastFile :: MonadFD4 m => m FilePath
 getLastFile = gets lfile
-
-addDecl :: MonadFD4 m => Decl TTerm -> m ()
-addDecl d = modify (\s -> s { glb = d : glb s, cantDecl = cantDecl s + 1 })
-
-addTy :: MonadFD4 m => Name -> Ty -> m ()
-addTy n ty = modify (\s -> s { env = (n,ty) : env s })
-
-eraseLastFileDecls :: MonadFD4 m => m ()
-eraseLastFileDecls = do
-      s <- get
-      let n = cantDecl s
-          (_,rem) = splitAt n (glb s)
-      modify (\s -> s {glb = rem, cantDecl = 0})
-
-lookupDecl :: MonadFD4 m => Name -> m (Maybe TTerm)
-lookupDecl nm = do
-     s <- get
-     case filter (hasName nm) (glb s) of
-       (Decl { declBody=e }):_ -> return (Just e)
-       (DeclTy {}):_ -> return Nothing
-       [] -> return Nothing
-   where hasName :: Name -> Decl a -> Bool
-         hasName nm (Decl { declName = nm' }) = nm == nm'
-         hasName nm (DeclTy { declName = nm' }) = nm == nm'
-
-lookupTy :: MonadFD4 m => Name -> m (Maybe Ty)
-lookupTy nm = do
-      s <- get
-      return $ lookup nm (tyEnv s)
 
 failPosFD4 :: MonadFD4 m => Pos -> String -> m a
 failPosFD4 p s = throwError (ErrPos p s)
@@ -144,14 +96,14 @@ catchErrors c = catchError (Just <$> c)
 -- | El tipo @FD4@ es un sinónimo de tipo para una mónada construida usando dos transformadores de mónada sobre la mónada @IO@.
 -- El transformador de mónad @ExcepT Error@ agrega a la mónada IO la posibilidad de manejar errores de tipo 'Errors.Error'.
 -- El transformador de mónadas @StateT GlEnv@ agrega la mónada @ExcepT Error IO@ la posibilidad de manejar un estado de tipo 'Global.GlEnv'.
-type FD4 = ReaderT Conf (StateT GlEnv (ExceptT Error IO))
+type FD4 = StateT GlEnv (ExceptT Error IO)
 
 -- | Esta es una instancia vacía, ya que 'MonadFD4' no tiene funciones miembro.
 instance MonadFD4 FD4
 
 -- 'runFD4\'' corre una computación de la mónad 'FD4' en el estado inicial 'Global.initialEnv' 
-runFD4' :: FD4 a -> Conf -> IO (Either Error (a, GlEnv))
-runFD4' c conf =  runExceptT $ runStateT (runReaderT c conf)  initialEnv
+runFD4' :: FD4 a -> IO (Either Error (a, GlEnv))
+runFD4' c =  runExceptT $ runStateT c initialEnv
 
-runFD4:: FD4 a -> Conf -> IO (Either Error a)
-runFD4 c conf = fmap fst <$> runFD4' c conf
+runFD4:: FD4 a -> IO (Either Error a)
+runFD4 c = fmap fst <$> runFD4' c
