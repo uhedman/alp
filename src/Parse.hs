@@ -2,15 +2,15 @@
 {-# HLINT ignore "Use <$>" #-}
 {-|
 Module      : Parse
-Description : Define un parser de términos FD40 a términos fully named.
-Copyright   : (c) Mauro Jaskelioff, Guido Martínez, 2020.
+Description : Define un parser de formulas.
+Copyright   : (c) Us Hedman, 2023.
 License     : GPL-3
 Maintainer  : mauro@fceia.unr.edu.ar
 Stability   : experimental
 
 -}
 
-module Parse (tm, Parse.parse, decl, runP, P, program, declOrTm) where
+module Parse (Parse.parse, runP, P, form) where
 
 import Prelude hiding ( const )
 import Lang hiding (getPos)
@@ -19,9 +19,6 @@ import Text.Parsec hiding (runP,parse)
 --import Data.Char ( isNumber, ord )
 import qualified Text.Parsec.Token as Tok
 import Text.ParserCombinators.Parsec.Language --( GenLanguageDef(..), emptyDef )
-import qualified Text.Parsec.Expr as Ex
-import Text.Parsec.Expr (Operator, Assoc)
-import Control.Monad.Identity (Identity)
 
 type P = Parsec String ()
 
@@ -35,9 +32,8 @@ lexer = Tok.makeTokenParser langDef
 langDef :: LanguageDef u
 langDef = emptyDef {
          commentLine    = "#",
-         reservedNames = ["let", "rec","fun", "fix", "then", "else","in",
-                           "ifz", "print","Nat","type"],
-         reservedOpNames = ["->",":","=","+","-"]
+         reservedNames = ["True", "False"],
+         reservedOpNames = ["->","V","∧"]
         }
 
 whiteSpace :: P ()
@@ -68,173 +64,38 @@ tyIdentifier = Tok.lexeme lexer $ do
   return (c:cs)
 
 -----------------------
--- Parsers
+-- Parser
 -----------------------
 
-num :: P Int
-num = fromInteger <$> natural
+form1 :: P Form
+form1 = do{ x <- reserved "True"
+          ; return (FConst True)
+          }
+    <|> do{ x <- reserved "False"
+          ; return (FConst False)
+          }
+    <|> parens form
 
-var :: P Name
-var = identifier
+form2 :: P (Form -> Form -> Form)
+form2 = do{ reservedOp "V"
+          ; return FDisy
+          }
+    <|> do{ reservedOp "∧"
+          ; return FConj
+          }
+    <|> do{ reservedOp "->"
+          ; return FImp
+          }
 
-getPos :: P Pos
-getPos = do pos <- getPosition
-            return $ Pos (sourceLine pos) (sourceColumn pos)
-
-tyatom :: P STy
-tyatom = (reserved "Nat" >> return SNatTy)
-         <|> do v <-var 
-                return (Syn v)
-         <|> parens typeP
-
-typeP :: P STy
-typeP = try (do 
-          x <- tyatom
-          reservedOp "->"
-          y <- typeP
-          return (SFun x y))
-      <|> tyatom
-          
-const :: P Const
-const = CNat <$> num
-
-printOp :: P STerm
-printOp = do
-  i <- getPos
-  reserved "print"
-  str <- option "" stringLiteral
-  a <- atom
-  return (SPrint i str a)
-
-binary :: String -> BinaryOp -> Assoc -> Operator String () Identity STerm
-binary s f = Ex.Infix (reservedOp s >> return (SBinaryOp NoPos f))
-
-table :: [[Operator String () Identity STerm]]
-table = [[binary "+" Add Ex.AssocLeft,
-          binary "-" Sub Ex.AssocLeft]]
-
-expr :: P STerm
-expr = Ex.buildExpressionParser table tm
-
-atom :: P STerm
-atom =     (flip SConst <$> const <*> getPos)
-       <|> flip SV <$> var <*> getPos
-       <|> parens expr
-       <|> printOp
-
--- parsea un par (variable : tipo)
-binding :: P ([Name], STy)
-binding = do vs <- many1 var
-             reservedOp ":"
-             ty <- typeP
-             return (vs, ty)
-
-spreadBinds :: [([Name], STy)] -> [(Name, STy)]
-spreadBinds = concatMap f
-  where f (vs, t) = map (\v -> (v, t)) vs
-
-lam :: P STerm
-lam = do i <- getPos
-         reserved "fun"
-         binds <- many1 (parens binding)
-         reservedOp "->"
-         t <- expr
-         return (SLam i (spreadBinds binds) t)
-
--- Nota el parser app también parsea un solo atom.
-app :: P STerm
-app = do i <- getPos
-         f <- atom
-         args <- many atom
-         return (foldl (SApp i) f args)
-
-ifz :: P STerm
-ifz = do i <- getPos
-         reserved "ifz"
-         c <- expr
-         reserved "then"
-         t <- expr
-         reserved "else"
-         e <- expr
-         return (SIfZ i c t e)
-
-fix :: P STerm
-fix = do i <- getPos
-         reserved "fix"
-         ([f], fty) <- parens binding
-         ([x], xty) <- parens binding
-         binds <- many (parens binding) <|> return []
-         reservedOp "->"
-         t <- expr
-         return (SFix i (f,fty) (x,xty) (spreadBinds binds) t)
-
-letexp :: P STerm
-letexp = do
-  i <- getPos
-  reserved "let"
-  try (do recBool <- (reserved "rec" >> return True) <|> return False
-          v <- var
-          binds <- many1 (parens binding)
-          reservedOp ":"
-          ty <- typeP
-          reservedOp "="  
-          def <- expr
-          reserved "in"
-          body <- expr
-          return (SLetLam i recBool (spreadBinds binds) (v,ty) def body))
-      <|> (do ([v],ty) <- binding <|> parens binding
-              reservedOp "="  
-              def <- expr
-              reserved "in"
-              body <- expr
-              return (SLetVar i (v, ty) def body))
-
--- | Parser de términos
-tm :: P STerm
-tm = app <|> lam <|> ifz <|> printOp <|> fix <|> letexp
-
--- | Parser de declaraciones
-decl :: P (SDecl STerm)
-decl = do 
-  i <- getPos
-  try (do 
-    reserved "type"
-    v <- var
-    reservedOp "="
-    ty <- typeP
-    return (SDeclTy i v ty))
-      <|> (do 
-          reserved "let"
-          try (do 
-            recBool <- (reserved "rec" >> return True) <|> return False
-            v <- var
-            binds <- many1 (parens binding)
-            reservedOp ":"
-            ty <- typeP
-            reservedOp "="  
-            def <- expr
-            return (SDeclFun i recBool v (spreadBinds binds) ty def))
-              <|> (do 
-                ([v],ty) <- binding <|> parens binding
-                reservedOp "="  
-                def <- expr
-                return (SDeclVar i v ty def)))
-
--- | Parser de programas (listas de declaraciones) 
-program :: P [SDecl STerm]
-program = many decl
-
--- | Parsea una declaración a un término
--- Útil para las sesiones interactivas
-declOrTm :: P (Either (SDecl STerm) STerm)
-declOrTm =  try (Left <$> decl) <|> (Right <$> expr)
+form :: P Form
+form = chainl1 form1 form2
 
 -- Corre un parser, chequeando que se pueda consumir toda la entrada
 runP :: P a -> String -> String -> Either ParseError a
 runP p s filename = runParser (whiteSpace *> p <* eof) () filename s
 
 --para debugging en uso interactivo (ghci)
-parse :: String -> STerm
-parse s = case runP expr s "" of
+parse :: String -> Form
+parse s = case runP form s "" of
             Right t -> t
             Left e -> error ("no parse: " ++ show s)
