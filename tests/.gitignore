@@ -1,0 +1,6 @@
+*.c
+
+*.check*
+*.actual_out*
+*.actual_opt_out
+*.bc32
