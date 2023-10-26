@@ -14,7 +14,6 @@ module Parse (Parse.parse, runP, P, form) where
 
 import Prelude hiding ( const )
 import Lang hiding (getPos)
-import Common
 import Text.Parsec hiding (runP,parse)
 --import Data.Char ( isNumber, ord )
 import qualified Text.Parsec.Token as Tok
@@ -33,7 +32,7 @@ langDef :: LanguageDef u
 langDef = emptyDef {
          commentLine    = "#",
          reservedNames = ["True", "False"],
-         reservedOpNames = ["->","V","∧"]
+         reservedOpNames = ["<->","->","|","&","¬"]
         }
 
 whiteSpace :: P ()
@@ -69,22 +68,25 @@ tyIdentifier = Tok.lexeme lexer $ do
 
 form1 :: P Form
 form1 = do{ x <- reserved "True"
-          ; return (FConst True)
+          ; return (Atom True)
           }
     <|> do{ x <- reserved "False"
-          ; return (FConst False)
+          ; return (Atom False)
           }
     <|> parens form
 
 form2 :: P (Form -> Form -> Form)
-form2 = do{ reservedOp "V"
-          ; return FDisy
+form2 = do{ reservedOp "|"
+          ; return Conj
           }
-    <|> do{ reservedOp "∧"
-          ; return FConj
+    <|> do{ reservedOp "&"
+          ; return Disy
           }
     <|> do{ reservedOp "->"
-          ; return FImp
+          ; return Cond
+          }
+    <|> do{ reservedOp "<->"
+          ; return Cond
           }
 
 form :: P Form
