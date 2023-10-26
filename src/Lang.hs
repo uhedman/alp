@@ -18,19 +18,29 @@ module Lang where
 
 -- | AST de formulas
 data Form  =
-    FConst Bool
-  | FImp Form Form
-  | FConj Form Form
-  | FDisy Form Form
+    Atom Bool
+  | FVar Char
+  | Neg Form
+  | Conj Form Form
+  | Disy Form Form
+  | Cond Form Form
+  | Bicond Form Form
 
 -- | AST de lambda terminos
 data Term a =
-    Var Name (Ty a)
+    TVar Var
   | Const Bool
-  | Lam Name (Ty a) (Term a)
+  | Lam Name (Ty a) (Scope a)
   | App (Term a) (Term a)
 
+newtype Scope a = Sc (Term a)
+
 type Name = String
+
+data Var = 
+    Bound !Int
+  | Free Name
+  | Global Name
 
 data Ty a =
     T [a]
