@@ -1,21 +1,26 @@
-{-|
-Module      : Global
-Description : Define el estado global del demostrador de teoremas
-Copyright   : (c) Ulises Hedman, 2023.
-License     : GPL-3
-Maintainer  : ulyhedman@hotmail.com
-Stability   : experimental
--}
-
 module Global where
+import Lang
 
 data GlEnv = GlEnv {
-  inter :: Bool,        --  ^ True, si estamos en modo interactivo.
-                        -- Este parámetro puede cambiar durante la ejecución:
-                        -- Es falso mientras se cargan archivos, pero luego puede ser verdadero.
-  lfile :: String       -- ^ Último archivo cargado.
+  inter :: Bool,
+  tablero :: Tablero,
+  turno :: Jugador,
+  lfile :: String
 }
 
 -- | Valor del estado inicial
 initialEnv :: GlEnv
-initialEnv = GlEnv False ""
+initialEnv = GlEnv False tableroInicial B ""
+
+tableroInicial :: [Maybe Pieza]
+tableroInicial = 
+  [Just (T N), Just (C N), Just (A N), Just (D N), Just (R N), Just (A N), Just (C N), Just (T N),
+   Just (P N), Just (P N), Just (P N), Just (P N), Just (P N), Just (P N), Just (P N), Just (P N),
+   Nothing   , Nothing   , Nothing   , Nothing   , Nothing   , Nothing   , Nothing   , Nothing   ,
+   Nothing   , Nothing   , Nothing   , Nothing   , Nothing   , Nothing   , Nothing   , Nothing   ,
+   Nothing   , Nothing   , Nothing   , Nothing   , Nothing   , Nothing   , Nothing   , Nothing   ,
+   Nothing   , Nothing   , Nothing   , Nothing   , Nothing   , Nothing   , Nothing   , Nothing   ,
+   Nothing   , Nothing   , Nothing   , Nothing   , Nothing   , Nothing   , Nothing   , Nothing   ,
+   Nothing   , Nothing   , Nothing   , Nothing   , Nothing   , Nothing   , Nothing   , Nothing   ,
+   Just (P B), Just (P B), Just (P B), Just (P B), Just (P B), Just (P B), Just (P B), Just (P B),
+   Just (T B), Just (C B), Just (A B), Just (D B), Just (R B), Just (A B), Just (C B), Just (T B)]
