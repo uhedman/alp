@@ -17,7 +17,7 @@ game :: (MonadChess m, MonadMask m) => InputT m ()
 game = do
        lift $ setInter True
        s <- lift get
-       when (inter s) $ liftIO $ putStrLn "Juego de ajedrez.\n"
+       when (inter s) $ liftIO $ putStrLn "Juego de ajedrez."
        loop
   where loop = do str <- lift pp
                   lift $ printChess str

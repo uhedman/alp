@@ -1,21 +1,22 @@
 module Lang where
 
-data Movimiento =
-    Captura Pieza Casilla
-  | CapturaConJaque Pieza Casilla
-  | Jaque Pieza Casilla
-  | JaqueMate Pieza Casilla
+data Movimiento = Movimiento Pieza Casilla Casilla Captura Jaque
+
+type PiezaJugador = (Pieza, Jugador)
 
 data Pieza =
-    A Jugador -- Alfil
-  | C Jugador -- Caballo
-  | D Jugador -- Dama
-  | P Jugador -- Peon
-  | R Jugador -- Rey
-  | T Jugador -- Torre
+    A -- Alfil
+  | C -- Caballo
+  | D -- Dama
+  | P -- Peon
+  | R -- Rey
+  | T -- Torre
+  deriving Read
 
 data Jugador = B | N -- Blancas | Negras
+data Jaque = J | M | Nada
+type Captura = Bool
 type Columna = Char
 type Fila = Int
 type Casilla = (Columna, Fila)
-type Tablero = [Maybe Pieza]
+type Tablero = [[Maybe PiezaJugador]]

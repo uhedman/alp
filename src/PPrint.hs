@@ -11,8 +11,8 @@ import Prettyprinter
   ( annotate,
     defaultLayoutOptions,
     layoutSmart,
-    sep,
     Doc,
+    punctuate,
     Pretty(pretty) )
 import MonadChess
 
@@ -24,25 +24,34 @@ colorBlancas = annotate (color Blue)
 
 -- | Pretty printer para el tablero
 t2doc :: Tablero -> Doc AnsiStyle
-t2doc t = sep (map casilla2doc t)
+t2doc t = 
+  let separador = pretty "\n+---+---+---+---+---+---+---+---+\n"
+      separatedList = mconcat $ punctuate separador (map fila2doc t)
+  in mconcat [separador, separatedList, separador]
 
-casilla2doc :: Maybe Pieza -> Doc AnsiStyle
-casilla2doc Nothing  = pretty ""
+fila2doc :: [Maybe PiezaJugador] -> Doc AnsiStyle
+fila2doc f = 
+  let separador = pretty "|"
+      separatedList = mconcat $ punctuate separador (map casilla2doc f)
+  in mconcat [separador, separatedList, separador]
+
+casilla2doc :: Maybe PiezaJugador -> Doc AnsiStyle
+casilla2doc Nothing  = pretty "   "
 casilla2doc (Just p) = pieza2doc p
 
-pieza2doc :: Pieza -> Doc AnsiStyle
-pieza2doc (A B) = colorBlancas (pretty "A")
-pieza2doc (A N) = colorNegras (pretty "A")
-pieza2doc (C B) = colorBlancas (pretty "C")
-pieza2doc (C N) = colorNegras (pretty "C")
-pieza2doc (D B) = colorBlancas (pretty "D")
-pieza2doc (D N) = colorNegras (pretty "D")
-pieza2doc (P B) = colorBlancas (pretty "P")
-pieza2doc (P N) = colorNegras (pretty "P")
-pieza2doc (R B) = colorBlancas (pretty "R")
-pieza2doc (R N) = colorNegras (pretty "R")
-pieza2doc (T B) = colorBlancas (pretty "T")
-pieza2doc (T N) = colorNegras (pretty "T")
+pieza2doc :: PiezaJugador -> Doc AnsiStyle
+pieza2doc (A, B) = colorBlancas (pretty " ♗ ")
+pieza2doc (A, N) = colorNegras (pretty " ♗ ")
+pieza2doc (C, B) = colorBlancas (pretty " ♘ ")
+pieza2doc (C, N) = colorNegras (pretty " ♘ ")
+pieza2doc (D, B) = colorBlancas (pretty " ♕ ")
+pieza2doc (D, N) = colorNegras (pretty " ♕ ")
+pieza2doc (P, B) = colorBlancas (pretty " ♙ ")
+pieza2doc (P, N) = colorNegras (pretty " ♙ ")
+pieza2doc (R, B) = colorBlancas (pretty " ♔ ")
+pieza2doc (R, N) = colorNegras (pretty " ♔ ")
+pieza2doc (T, B) = colorBlancas (pretty " ♖ ")
+pieza2doc (T, N) = colorNegras (pretty " ♖ ")
 
 -- | Pretty printing del tablero (String)
 pp :: MonadChess m => m String
