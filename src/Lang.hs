@@ -1,6 +1,10 @@
 module Lang where
 
-data Movimiento = Movimiento Pieza Casilla Casilla Captura Jaque
+data Movimiento = 
+    Normal Pieza (Maybe Casilla) Casilla Captura Jaque
+  | EnroqueCorto Jaque
+  | EnroqueLargo Jaque
+  deriving Show
 
 type PiezaJugador = (Pieza, Jugador)
 
@@ -11,10 +15,14 @@ data Pieza =
   | P -- Peon
   | R -- Rey
   | T -- Torre
-  deriving Read
+  deriving (Read, Show)
 
-data Jugador = B | N -- Blancas | Negras
-data Jaque = J | M | Nada
+data Jugador = 
+  B | N -- Blancas | Negras
+  deriving Show
+data Jaque = 
+  J | JM | SJ -- Jaque | Jaque Mate | Sin Jaque
+  deriving Show
 type Captura = Bool
 type Columna = Char
 type Fila = Int

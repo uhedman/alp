@@ -1,6 +1,6 @@
 module Main where
 import PPrint ( pp )
-import Parse ()
+import Parse (parse)
 import MonadChess ( when, MonadIO(liftIO), MonadTrans(lift), MonadState(get), MonadChess, setInter, printChess, runChess )
 import System.Console.Haskeline ( defaultSettings, getInputLine, runInputT, InputT )
 import Global ( GlEnv(inter) )
@@ -29,5 +29,7 @@ game = do
                                  loop
 
 exec :: MonadChess m => String -> InputT m ()
-exec phrase = do --mvs <- parse phrase
+exec phrase = do case parse phrase of
+                   Left e -> lift $ printChess $ "Error: " ++ show e
+                   Right mv -> lift $ printChess (show mv)
                  return ()

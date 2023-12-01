@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use <$>" #-}
 
-module Parse (runP, P) where
+module Parse (runP, P, parse) where
 
 import Prelude hiding ( const )
 import Text.Parsec hiding (runP,parse)
@@ -10,7 +10,7 @@ import Text.ParserCombinators.Parsec.Language
     ( emptyDef,
       GenLanguageDef(identLetter, reservedNames),
       LanguageDef )
-import Lang (Movimiento (Movimiento), Pieza, Casilla, Jaque (M, J, Nada))
+import Lang (Movimiento (..), Pieza (..), Casilla, Jaque (..))
 
 type P = Parsec String ()
 
@@ -23,7 +23,7 @@ lexer = Tok.makeTokenParser langDef
 
 langDef :: LanguageDef u
 langDef = emptyDef {
-         reservedNames = ["x", "+", "#", "-"]
+         reservedNames = ["+", "#", "-"]
         }
 
 whiteSpace :: P ()
@@ -59,7 +59,9 @@ tyIdentifier = Tok.lexeme lexer $ do
 
 pieza :: P Pieza
 pieza = do l <- letter
-           return (read [l])
+           case readPieza l of
+             Just p -> return p
+             Nothing -> fail $ "Pieza no reconocida: " ++ [l]
 
 casilla :: P Casilla
 casilla = do l <- letter
@@ -67,28 +69,51 @@ casilla = do l <- letter
              return (l, read [n])
 
 captura :: P Bool
-captura = try (do reserved "x" >> return True)
-            <|> return False
+captura = (char 'x' >> return True) <|> return False
 
 jaque :: P Jaque
-jaque = try (do reserved "+" >> return J)
-          <|> try (do reserved "+" >> return M)
-            <|> return Nada
+jaque = (reserved "+" >> return J) 
+    <|> (reserved "#" >> return JM)
+    <|> return SJ
+
+normal :: P Movimiento
+normal = do p <- try pieza <|> return P
+            c <- captura
+            c1 <- casilla
+            c' <- captura
+            c2 <- (casilla >>= \cf -> return (Just cf)) <|> return Nothing
+            j <- jaque
+            case c2 of
+              Nothing -> return $ Normal p Nothing c1 (c || c') j
+              Just cf -> return $ Normal p (Just c1) cf (c || c') j
+
+enroque :: P Movimiento
+enroque = try (do string "O-O-O"
+                  j <- jaque
+                  return $ EnroqueLargo j)
+          <|>  do string "O-O"
+                  j <- jaque
+                  return $ EnroqueCorto j
 
 movimiento :: P Movimiento
-movimiento = do p <- pieza
-                i <- casilla
-                b <- captura
-                f <- casilla
-                j <- jaque
-                return $ Movimiento p i f b j
+movimiento = try normal <|> enroque
 
 -- Corre un parser, chequeando que se pueda consumir toda la entrada
 runP :: P a -> String -> String -> Either ParseError a
 runP p s filename = runParser (whiteSpace *> p <* eof) () filename s
 
--- para debugging en uso interactivo (ghci)
--- parse :: String -> Form
--- parse s = case runP form s "" of
---             Right t -> t
---             Left e -> error ("no parse: " ++ show s)
+parse :: String -> Either ParseError Movimiento
+parse s = runP movimiento s ""
+
+-----------------------
+-- Funciones auxiliares
+-----------------------
+
+readPieza :: Char -> Maybe Pieza
+readPieza 'A' = Just A
+readPieza 'C' = Just C
+readPieza 'D' = Just D
+readPieza 'P' = Just Lang.P
+readPieza 'R' = Just R
+readPieza 'T' = Just T
+readPieza _   = Nothing
