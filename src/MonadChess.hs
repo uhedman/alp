@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module MonadChess (
@@ -11,6 +10,9 @@ module MonadChess (
   printStrChess,
   setLastFile,
   getLastFile,
+  getTurno,
+  getEnroqueBlanco,
+  getEnroqueNegro,
   getTablero,
   catchErrors,
   MonadChess,
@@ -23,7 +25,7 @@ import Errors ( Error(..) )
 import Control.Monad.State
 import Control.Monad.Except
 import System.IO
-import Lang (Tablero)
+import Lang (Tablero, Jugador)
 
 class (MonadIO m, MonadState GlEnv m, MonadError Error m) => MonadChess m where
 
@@ -38,6 +40,15 @@ printChess = liftIO . putStrLn
 
 printStrChess :: MonadChess m => String -> m ()
 printStrChess = liftIO . putStr
+
+getEnroqueBlanco :: MonadChess m => m Bool
+getEnroqueBlanco = gets enroqueBlanco
+
+getEnroqueNegro :: MonadChess m => m Bool
+getEnroqueNegro = gets enroqueNegro
+
+getTurno :: MonadChess m => m Jugador
+getTurno = gets turno
 
 getTablero :: MonadChess m => m Tablero
 getTablero = gets tablero

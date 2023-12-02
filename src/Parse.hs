@@ -11,6 +11,7 @@ import Text.ParserCombinators.Parsec.Language
       GenLanguageDef(identLetter, reservedNames),
       LanguageDef )
 import Lang (Movimiento (..), Pieza (..), Casilla, Jaque (..))
+import Data.List (elemIndex)
 
 type P = Parsec String ()
 
@@ -65,8 +66,10 @@ pieza = do l <- letter
 
 casilla :: P Casilla
 casilla = do l <- letter
-             n <- digit
-             return (l, read [n])
+             n <- try digit <|> return '0'
+             case columna l of
+               Just i -> return (i+1, read [n])
+               Nothing -> fail $ "Columna no reconocida: " ++ [l]
 
 captura :: P Bool
 captura = (char 'x' >> return True) <|> return False
@@ -117,3 +120,6 @@ readPieza 'P' = Just Lang.P
 readPieza 'R' = Just R
 readPieza 'T' = Just T
 readPieza _   = Nothing
+
+columna :: Char -> Maybe Int
+columna c = elemIndex c "abcdefgh"

@@ -1,4 +1,5 @@
 module Lang where
+import Data.Array
 
 data Movimiento = 
     Normal Pieza (Maybe Casilla) Casilla Captura Jaque
@@ -19,12 +20,12 @@ data Pieza =
 
 data Jugador = 
   B | N -- Blancas | Negras
-  deriving Show
+  deriving (Show,Eq)
 data Jaque = 
   J | JM | SJ -- Jaque | Jaque Mate | Sin Jaque
   deriving Show
 type Captura = Bool
-type Columna = Char
+type Columna = Int
 type Fila = Int
 type Casilla = (Columna, Fila)
-type Tablero = [[Maybe PiezaJugador]]
+type Tablero = Array (Int, Int) (Maybe PiezaJugador)

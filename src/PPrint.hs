@@ -15,6 +15,7 @@ import Prettyprinter
     punctuate,
     Pretty(pretty) )
 import MonadChess
+import Data.Array (elems)
 
 --Colores
 colorNegras :: Doc AnsiStyle -> Doc AnsiStyle
@@ -26,7 +27,8 @@ colorBlancas = annotate (color Blue)
 t2doc :: Tablero -> Doc AnsiStyle
 t2doc t = 
   let separador = pretty "\n+---+---+---+---+---+---+---+---+\n"
-      separatedList = mconcat $ punctuate separador (map fila2doc t)
+      matrix = [take 8 (drop ((8-i)*8) (elems t)) | i <- [1 .. 8]]
+      separatedList = mconcat $ punctuate separador (map fila2doc matrix)
   in mconcat [separador, separatedList, separador]
 
 fila2doc :: [Maybe PiezaJugador] -> Doc AnsiStyle
