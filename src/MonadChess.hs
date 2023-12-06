@@ -10,6 +10,7 @@ module MonadChess (
   setLastFile,
   getLastFile,
   getTurno,
+  setTurno,
   getEnroqueBlanco,
   getEnroqueNegro,
   getTablero,
@@ -42,6 +43,9 @@ getEnroqueNegro = gets enroqueNegro
 
 getTurno :: MonadChess m => m Jugador
 getTurno = gets turno
+
+setTurno :: MonadChess m => Jugador -> m ()
+setTurno p = modify (\s -> s {turno = p})
 
 getTablero :: MonadChess m => m Tablero
 getTablero = gets tablero
