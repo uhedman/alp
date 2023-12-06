@@ -16,7 +16,7 @@ data Pieza =
   | P -- Peon
   | R -- Rey
   | T -- Torre
-  deriving (Read, Show)
+  deriving (Read, Show, Eq)
 
 data Jugador = 
   B | N -- Blancas | Negras

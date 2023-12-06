@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use <$>" #-}
 
-module Parse (runP, P, parse) where
+module Parse (runP, P, parseMovimiento, parseColocar) where
 
 import Prelude hiding ( const )
 import Text.Parsec hiding (runP,parse)
@@ -10,7 +10,7 @@ import Text.ParserCombinators.Parsec.Language
     ( emptyDef,
       GenLanguageDef(identLetter, reservedNames),
       LanguageDef )
-import Lang (Movimiento (..), Pieza (..), Casilla, Jaque (..))
+import Lang (Movimiento (..), Pieza (..), Casilla, Jaque (..), Jugador (..))
 import Data.List (elemIndex)
 
 type P = Parsec String ()
@@ -64,11 +64,18 @@ pieza = do l <- letter
              Just p -> return p
              Nothing -> fail $ "Pieza no reconocida: " ++ [l]
 
+jugador :: P Jugador
+jugador = do l <- letter
+             case l of
+               'B' -> return B
+               'N' -> return N
+               _ -> fail $ "Jugador no reconocido: " ++ [l]
+
 casilla :: P Casilla
 casilla = do l <- letter
              n <- try digit <|> return '0'
              case columna l of
-               Just i -> return (i+1, read [n])
+               Just i -> return (read [n], i + 1)
                Nothing -> fail $ "Columna no reconocida: " ++ [l]
 
 captura :: P Bool
@@ -101,12 +108,21 @@ enroque = try (do string "O-O-O"
 movimiento :: P Movimiento
 movimiento = try normal <|> enroque
 
+colocar :: P (Pieza, Jugador, Casilla)
+colocar = do p <- pieza
+             c <- casilla
+             j <- jugador
+             return (p, j, c)
+
 -- Corre un parser, chequeando que se pueda consumir toda la entrada
 runP :: P a -> String -> String -> Either ParseError a
 runP p s filename = runParser (whiteSpace *> p <* eof) () filename s
 
-parse :: String -> Either ParseError Movimiento
-parse s = runP movimiento s ""
+parseMovimiento :: String -> Either ParseError Movimiento
+parseMovimiento s = runP movimiento s ""
+
+parseColocar :: String -> Either ParseError (Pieza, Jugador, Casilla)
+parseColocar s = runP colocar s ""
 
 -----------------------
 -- Funciones auxiliares

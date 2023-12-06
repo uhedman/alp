@@ -3,7 +3,6 @@ import Lang
 import Data.Array (listArray)
 
 data GlEnv = GlEnv {
-  inter :: Bool,
   tablero :: Tablero,
   turno :: Jugador,
   enroqueBlanco :: Bool,
@@ -12,8 +11,14 @@ data GlEnv = GlEnv {
 }
 
 -- | Valor del estado inicial
-initialEnv :: GlEnv
-initialEnv = GlEnv False tableroInicial B True True ""
+initialEnvChess :: GlEnv
+initialEnvChess = GlEnv tableroInicial B True True ""
+
+initialEnvEmpty :: GlEnv
+initialEnvEmpty = GlEnv tableroVacio B True True ""
+
+tableroVacio :: Tablero
+tableroVacio = listArray ((1, 1), (8, 8)) [Nothing | i <- [1..64]]
 
 tableroInicial :: Tablero
 tableroInicial = listArray ((1, 1), (8, 8))

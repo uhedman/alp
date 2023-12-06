@@ -3,9 +3,8 @@
 
 module MonadChess (
   Chess,
-  setInter,
-  getInter,
   runChess,
+  runEmptyChess,
   printChess,
   printStrChess,
   setLastFile,
@@ -28,12 +27,6 @@ import System.IO
 import Lang (Tablero, Jugador)
 
 class (MonadIO m, MonadState GlEnv m, MonadError Error m) => MonadChess m where
-
-setInter :: MonadChess m => Bool -> m ()
-setInter b = modify (\s-> s {inter = b})
-
-getInter :: MonadChess m => m Bool
-getInter = gets inter
 
 printChess :: MonadChess m => String -> m ()
 printChess = liftIO . putStrLn
@@ -70,7 +63,13 @@ type Chess = StateT GlEnv (ExceptT Error IO)
 instance MonadChess Chess
 
 runChess' :: Chess a -> IO (Either Error (a, GlEnv))
-runChess' c = runExceptT $ runStateT c initialEnv
+runChess' c = runExceptT $ runStateT c initialEnvChess
 
 runChess:: Chess a -> IO (Either Error a)
 runChess c = fmap fst <$> runChess' c
+
+runEmptyChess' :: Chess a -> IO (Either Error (a, GlEnv))
+runEmptyChess' c = runExceptT $ runStateT c initialEnvEmpty
+
+runEmptyChess:: Chess a -> IO (Either Error a)
+runEmptyChess c = fmap fst <$> runEmptyChess' c
