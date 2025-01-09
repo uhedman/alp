@@ -1,68 +1,48 @@
 module Eval where
-import MonadChess (MonadChess, modify, getEnroqueBlanco, getEnroqueNegro, getTurno, getTablero)
-import Lang (Movimiento (..), Jugador (..), Tablero, Pieza (..), PiezaJugador, Casilla)
-import Global ( GlEnv(tablero, turno) )
-import Data.Array ( (//), elems )
-import Data.List (elemIndex)
+import MonadAC
+import Lang
+import Global
+import Data.List
 
-execPlace :: MonadChess m => Pieza -> Jugador -> Casilla -> m ()
-execPlace p j c = do tab <- getTablero
-                     let nuevoTablero = tab // [(c, Just (p,j))]
-                     modify (\s -> s {tablero = nuevoTablero})
+execSet :: MonadAC m => Action -> m ()
+execSet (Kill p) = do tab <- getTable
+                      when (p `elem` tab) $ do let newTable = delete p tab
+                                               modify (\s -> s {table = newTable, isHalted = False})
+execSet (Revive p) = do tab <- getTable
+                        unless (p `elem` tab) $ do let newTable = p : delete p tab
+                                                   modify (\s -> s {table = newTable, isHalted = False})
 
-execMove :: MonadChess m => Movimiento -> m ()
-execMove mv = do player <- getTurno
-                 tab <- getTablero
-                 nuevoTablero <- aux mv player tab
-                 case nuevoTablero of
-                   Nothing -> return ()
-                   Just t -> modify (\s -> s {turno = change player, tablero = t})
+rmdups :: Eq a => [a] -> [a]
+rmdups [] = []
+rmdups (x:xs) = x : rmdups (filter (/= x) xs)
 
-aux :: MonadChess m => Movimiento -> Jugador -> Tablero -> m (Maybe Tablero)
-aux (Normal p Nothing cf _ _) player tab = 
-  if p == P 
-  then case search P cf player tab of
-         Just ci -> return $ Just $ mover ci cf (p, player) tab
-         Nothing -> return Nothing
-  else do let Just ci = elemIndex (Just (p, player)) (elems tab)
-          return $ Just $ mover (div ci 8 + 1, mod ci 8 + 1) cf (p, player) tab
-aux (Normal p (Just ci) cf _ _) player tab = 
-  return $ Just $ mover ci cf (p, player) tab
-aux (EnroqueCorto j) B tab =
-  do b <- getEnroqueBlanco 
-     if not b 
-     then return Nothing
-     else do let tab' = mover (1,5) (1,7) (R,B) tab
-             let tab'' = mover (1,8) (1,6) (T,B) tab'
-             return $ Just tab''
-aux (EnroqueCorto j) N tab =
-  do b <- getEnroqueNegro 
-     if not b 
-     then return Nothing
-     else do let tab' = mover (8,5) (8,7) (R,N) tab
-             let tab'' = mover (8,8) (8,6) (T,N) tab'
-             return $ Just tab'' 
-aux (EnroqueLargo j) B tab =
-  do b <- getEnroqueBlanco 
-     if not b
-     then return Nothing
-     else do let tab' = mover (1,5) (1,3) (R,B) tab
-             let tab'' = mover (1,1) (1,4) (T,B) tab'
-             return $ Just tab'' 
-aux (EnroqueLargo j) N tab =
-  do b <- getEnroqueNegro 
-     if not b
-     then return Nothing
-     else do let tab' = mover (8,5) (8,3) (R,N) tab
-             let tab'' = mover (8,1) (8,4) (T,N) tab'
-             return $ Just tab'' 
+neighbs :: Int -> Int -> Pos -> [Pos]
+neighbs r c (x, y) = filter inbounds [(x-1, y-1), (x,   y-1),
+                                      (x+1, y-1), (x-1, y),
+                                      (x+1, y),   (x-1, y+1),
+                                      (x,   y+1), (x-1, y+1)]
+  where inbounds (a, b) = a >= 1 && b >= 1 && a <= r && b <= c
+  
 
-mover :: Casilla -> Casilla -> PiezaJugador -> Tablero -> Tablero
-mover ci cf p tab = tab // [(ci, Nothing), (cf, Just p)]
+step :: Table -> Int -> Int -> Table
+step tab c r = survivors ++ births
+  where survivors = filter (\p -> countNeighbours tab p == 2 || countNeighbours tab p == 3) tab
+        births = [p | p <- rmdups (concatMap (neighbs c r) tab),
+                      p `notElem` tab,
+                      countNeighbours tab p == 3]
 
-change :: Jugador -> Jugador
-change B = N
-change N = B
+execStep :: MonadAC m => m ()
+execStep = do tab <- getTable
+              e <- getEpoch
+              c <- getCols
+              r <- getRows
+              let newTable = step tab c r
+              modify (\s -> if newTable == tab
+                            then s {isHalted = True}
+                            else s {epoch = e + 1, table = newTable})
 
-search :: Pieza -> Casilla -> Jugador -> Tablero -> Maybe Casilla
-search P cf player tab = Nothing
+countNeighbours :: Table -> Pos -> Int
+countNeighbours tab (x, y) = length $ filter (`elem` tab) pos
+  where pos = [(x-1, y-1), (x, y-1), (x+1, y-1),
+               (x-1, y),             (x+1, y),
+               (x-1, y+1), (x, y+1), (x+1, y+1)]

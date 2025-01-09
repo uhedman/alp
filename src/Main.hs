@@ -1,74 +1,81 @@
 module Main where
-import PPrint ( pp )
-import Parse (parseMovimiento, parseColocar)
-import MonadChess ( MonadIO(liftIO), MonadTrans(lift), MonadChess, printChess, runChess, runEmptyChess, setTurno, getTurno )
+import PPrint
+import Parse
+import MonadAC
 import System.Console.Haskeline ( defaultSettings, getInputLine, runInputT, InputT )
 import Control.Monad.Catch (MonadMask)
-import Eval ( execMove, execPlace )
-import Lang (Jugador(N, B))
+import Eval
 import System.Environment (getArgs)
 
 prompt :: String
-prompt = "chess> "
+prompt = "gameoflife> "
 
 main :: IO ()
 main = do
   args <- getArgs
   let createFlag = "--create" `elem` args || "-c" `elem` args
   if createFlag 
-    then do runEmptyChess (runInputT defaultSettings setup)
+    then do runEmptyAC (runInputT defaultSettings setup)
             return ()
-    else do runChess (runInputT defaultSettings game)
+    else do runAC (runInputT defaultSettings setup)
             return ()
 
-game :: (MonadChess m, MonadMask m) => InputT m ()
-game = do
-       liftIO $ putStrLn "Juego de ajedrez."
-       str <- lift pp
-       lift $ printChess str
-       loop
-  where loop = do minput <- getInputLine prompt
-                  case minput of
-                    Nothing -> return ()
-                    Just "" -> loop
-                    Just x -> do exec x
-                                 p <- lift getTurno
-                                 lift $ printChess $ "Turno de las " ++ (if p == B then "blancas." else "negras.")
-                                 str <- lift pp
-                                 lift $ printChess str
-                                 loop
-
-setup :: (MonadChess m, MonadMask m) => InputT m ()
+setup :: (MonadAC m, MonadMask m) => InputT m ()
 setup = do
-       liftIO $ putStrLn $ "Creacion de tablero.\n" ++
-                           "Ingrese start para comenzar el juego.\n" ++
-                           "Ingrese B o N para elegir que color comienza el turno."
-       str <- lift pp
-       lift $ printChess str
+       liftIO $ putStrLn $ "Game of Life.\n"
+                         ++ "Ingrese start para comenzar el juego.\n"
+                         ++ "Ingrese R/K x y para revivir o matar una celula en (x, y).\n"
+                         ++ "Ingrese q para salir\n"
+       strTable <- lift pp
+       lift $ printAC strTable
        loop
   where loop = do minput <- getInputLine prompt
                   case minput of
                     Nothing -> return ()
                     Just "" -> loop
+                    Just "q" -> return ()
                     Just "start" -> game
-                    Just "B" -> do lift $ setTurno B
-                                   lift $ printChess "Las blancas comienzan el juego."
+                    Just cmd -> do commSet cmd
+                                   strTable <- lift pp
+                                   lift $ printAC strTable
                                    loop
-                    Just "N" -> do lift $ setTurno N
-                                   lift $ printChess "Las negras comienzan el juego."
+
+game :: (MonadAC m, MonadMask m) => InputT m ()
+game = do
+       liftIO $ putStrLn $ "Game of Life.\n"
+                         ++ "Ingrese R/K x y para revivir o matar una celula en (x, y).\n"
+                         ++ "Ingrese enter para simular indefinidamente\n"
+                         ++ "Ingrese step para simular una epoca\n"
+                         ++ "Ingrese q para salir\n"
+       str <- lift pp
+       lift $ printAC str
+       loop
+  where loop = do minput <- getInputLine prompt
+                  case minput of
+                    Nothing -> return ()
+                    Just "step" -> do lift execStep
+                                      epoch <- lift getEpoch
+                                      lift $ printAC $ "Epoch: " ++ show epoch
+                                      str <- lift pp
+                                      lift $ printAC str
+                                      loop
+                    Just "" -> inf 
+                               where inf = do lift execStep
+                                              epoch <- lift getEpoch
+                                              lift $ printAC $ "Epoch: " ++ show epoch
+                                              str <- lift pp
+                                              lift $ printAC str
+                                              h <- lift getIsHalted
+                                              if h then do lift $ printAC "Halted table"
+                                                           loop
+                                                   else inf
+                    Just "q" -> return ()
+                    Just cmd -> do commSet cmd
+                                   strTable <- lift pp
+                                   lift $ printAC strTable
                                    loop
-                    Just x -> do execSetup x
-                                 str <- lift pp
-                                 lift $ printChess str
-                                 loop
 
-execSetup :: MonadChess m => String -> InputT m ()
-execSetup phrase = case parseColocar phrase of
-                Left e -> lift $ printChess $ "Error: " ++ show e
-                Right (p, j, c) -> lift $ execPlace p j c
-
-exec :: MonadChess m => String -> InputT m ()
-exec phrase = case parseMovimiento phrase of
-                Left e -> lift $ printChess $ "Error: " ++ show e
-                Right mv -> do lift $ printChess (show mv)
-                               lift $ execMove mv
+commSet :: MonadAC m => String -> InputT m ()
+commSet phrase = case parseSet phrase of
+                Left e -> lift $ printAC $ "Error: " ++ show e
+                Right a -> lift $ execSet a

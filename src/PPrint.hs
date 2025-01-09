@@ -6,58 +6,32 @@ import Lang
 
 import Data.Text ( unpack )
 import Prettyprinter.Render.Terminal
-  ( renderStrict, color, Color (..), AnsiStyle )
+  ( renderStrict, AnsiStyle )
 import Prettyprinter
-  ( annotate,
-    defaultLayoutOptions,
+  ( defaultLayoutOptions,
     layoutSmart,
     Doc,
-    punctuate,
     Pretty(pretty) )
-import MonadChess
-import Data.Array (elems)
-
---Colores
-colorNegras :: Doc AnsiStyle -> Doc AnsiStyle
-colorNegras = annotate (color Red)
-colorBlancas :: Doc AnsiStyle -> Doc AnsiStyle
-colorBlancas = annotate (color Blue)
+import MonadAC
 
 -- | Pretty printer para el tablero
-t2doc :: Tablero -> Doc AnsiStyle
-t2doc t = 
-  let separador = pretty "\n+---+---+---+---+---+---+---+---+\n"
-      matrix = [take 8 (drop ((8-i)*8) (elems t)) | i <- [1 .. 8]]
-      separatedList = mconcat $ punctuate separador (map fila2doc matrix)
-  in mconcat [separador, separatedList, separador]
+t2doc :: Table -> Int -> Int -> Doc AnsiStyle
+t2doc table r c =
+  let border = replicate (c + 2) '+'
+      matrix = [[(i, j) `elem` table | i <- [1 .. c]] | j <- [1 .. r]]
+      separatedList = map (\row -> "+" ++ concatMap cell2doc row ++ "+") matrix
+  in pretty $ unlines $ [border] ++ separatedList ++ [border]
 
-fila2doc :: [Maybe PiezaJugador] -> Doc AnsiStyle
-fila2doc f = 
-  let separador = pretty "|"
-      separatedList = mconcat $ punctuate separador (map casilla2doc f)
-  in mconcat [separador, separatedList, separador]
-
-casilla2doc :: Maybe PiezaJugador -> Doc AnsiStyle
-casilla2doc Nothing  = pretty "   "
-casilla2doc (Just p) = pieza2doc p
-
-pieza2doc :: PiezaJugador -> Doc AnsiStyle
-pieza2doc (A, B) = colorBlancas (pretty " ♗ ")
-pieza2doc (A, N) = colorNegras (pretty " ♗ ")
-pieza2doc (C, B) = colorBlancas (pretty " ♘ ")
-pieza2doc (C, N) = colorNegras (pretty " ♘ ")
-pieza2doc (D, B) = colorBlancas (pretty " ♕ ")
-pieza2doc (D, N) = colorNegras (pretty " ♕ ")
-pieza2doc (P, B) = colorBlancas (pretty " ♙ ")
-pieza2doc (P, N) = colorNegras (pretty " ♙ ")
-pieza2doc (R, B) = colorBlancas (pretty " ♔ ")
-pieza2doc (R, N) = colorNegras (pretty " ♔ ")
-pieza2doc (T, B) = colorBlancas (pretty " ♖ ")
-pieza2doc (T, N) = colorNegras (pretty " ♖ ")
+cell2doc :: Bool -> String
+cell2doc True = "#"
+cell2doc False = " "
 
 -- | Pretty printing del tablero (String)
-pp :: MonadChess m => m String
-pp = render . t2doc <$> getTablero
+pp :: MonadAC m => m String
+pp = do r <- getRows
+        c <- getCols
+        tab <- getTable
+        return $ render $ t2doc tab r c
 
 render :: Doc AnsiStyle -> String
 render = unpack . renderStrict . layoutSmart defaultLayoutOptions
