@@ -1,7 +1,8 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use <$>" #-}
+{-# LANGUAGE TupleSections #-}
 
-module Parse (runP, P, parseSet) where
+module Parse (runP, P, parseSet, program) where
 
 import Prelude hiding ( const )
 import Text.Parsec hiding (runP,parse)
@@ -58,7 +59,7 @@ tyIdentifier = Tok.lexeme lexer $ do
 -----------------------
 
 cell :: P Bool
-cell = try (char '#' >> return True) <|> try (whiteSpace >> return False) <|> (satisfy (\_ -> True) >>= \c -> fail ("Caracter no reconocido: " ++ [c]))
+cell = (char '#' >> return True) <|> (char ' ' >> return False)
 
 set :: P Action
 set = do a <- do l <- letter
@@ -71,12 +72,43 @@ set = do a <- do l <- letter
          y <- natural
          return $ a (x, y)
 
+border :: P Int
+border = do char '+'
+            line <- many1 (char '-')
+            char '+'
+            whiteSpace
+            return (length line)
+
+row :: Int -> P [Int]
+row ncols = do char '|'
+               line <- count ncols cell
+               char '|'
+               whiteSpace
+               return $ removeDead $ zip [1..] line
+  where
+    removeDead :: [(Int, Bool)] -> [Int]
+    removeDead = map fst . filter snd
+
 -- Corre un parser, chequeando que se pueda consumir toda la entrada
 runP :: P a -> String -> String -> Either ParseError a
 runP p s filename = runParser (whiteSpace *> p <* eof) () filename s
 
 parseSet :: String -> Either ParseError Action
 parseSet s = runP set s ""
+
+-- | Parser de programas
+program :: P (Table, Int, Int)
+program = do ncols <- border
+             rows <- many1 $ row ncols
+             border
+             whiteSpace
+             let positions = removeEmpty $ zip [1..] rows
+             return (positions, length rows, ncols)
+  where
+    removeEmpty :: [(Int, [Int])] -> [Pos]
+    removeEmpty = concatMap (uncurry mapZip)
+    mapZip :: Int -> [Int] -> [(Int, Int)]
+    mapZip n = map (n,)
 
 -----------------------
 -- Funciones auxiliares

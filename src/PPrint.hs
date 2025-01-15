@@ -17,9 +17,9 @@ import MonadAC
 -- | Pretty printer para el tablero
 t2doc :: Table -> Int -> Int -> Doc AnsiStyle
 t2doc table r c =
-  let border = replicate (c + 2) '+'
-      matrix = [[(i, j) `elem` table | i <- [1 .. c]] | j <- [1 .. r]]
-      separatedList = map (\row -> "+" ++ concatMap cell2doc row ++ "+") matrix
+  let border = '+' : replicate c '-' ++ "+"
+      matrix = [[(i, j) `elem` table | j <- [1 .. c]] | i <- [1 .. r]]
+      separatedList = map (("|" ++) . (++ "|") . concatMap cell2doc) matrix
   in pretty $ unlines $ [border] ++ separatedList ++ [border]
 
 cell2doc :: Bool -> String

@@ -6,10 +6,12 @@ data GlEnv = GlEnv {
   cols :: Int,
   rows :: Int,
   epoch :: Int,
-  isHalted :: Bool,
-  lfile :: String
+  isHalted :: Bool
 }
 
 -- | Valor del estado inicial
-initialEnvEmpty :: GlEnv
-initialEnvEmpty = GlEnv [] 5 5 0 False ""
+initialEnv :: (Table, Int, Int) -> GlEnv
+initialEnv (t, nRows, nCols) = GlEnv t nRows nCols 0 False
+
+emptyTable :: (Table, Int, Int)
+emptyTable = ([], 6, 6)

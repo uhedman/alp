@@ -5,38 +5,42 @@ import Global
 import Data.List
 
 execSet :: MonadAC m => Action -> m ()
-execSet (Kill p) = do tab <- getTable
-                      when (p `elem` tab) $ do let newTable = delete p tab
-                                               modify (\s -> s {table = newTable, isHalted = False})
-execSet (Revive p) = do tab <- getTable
-                        unless (p `elem` tab) $ do let newTable = p : delete p tab
-                                                   modify (\s -> s {table = newTable, isHalted = False})
-
-rmdups :: Eq a => [a] -> [a]
-rmdups [] = []
-rmdups (x:xs) = x : rmdups (filter (/= x) xs)
+execSet action = do
+  tab <- getTable
+  let (shouldModify, updateFunc) = case action of
+        Kill p   -> (p `elem` tab, delete p tab)
+        Revive p -> (p `notElem` tab, p : delete p tab)
+  when shouldModify $ modify (\s -> s {table = updateFunc, isHalted = False})
 
 neighbs :: Int -> Int -> Pos -> [Pos]
-neighbs r c (x, y) = filter inbounds [(x-1, y-1), (x,   y-1),
-                                      (x+1, y-1), (x-1, y),
-                                      (x+1, y),   (x-1, y+1),
-                                      (x,   y+1), (x-1, y+1)]
-  where inbounds (a, b) = a >= 1 && b >= 1 && a <= r && b <= c
-  
+neighbs r c (x, y) = filter inbounds positions
+  where
+    positions = [(x-1, y-1), (x,   y-1),
+                 (x+1, y-1), (x-1, y),
+                 (x+1, y),   (x-1, y+1),
+                 (x,   y+1), (x+1, y+1)]
+    inbounds = precomputedBounds r c
 
-step :: Table -> Int -> Int -> Table
-step tab c r = survivors ++ births
-  where survivors = filter (\p -> countNeighbours tab p == 2 || countNeighbours tab p == 3) tab
-        births = [p | p <- rmdups (concatMap (neighbs c r) tab),
-                      p `notElem` tab,
-                      countNeighbours tab p == 3]
+precomputedBounds :: Int -> Int -> Pos -> Bool
+precomputedBounds r c (a, b) = a >= 1 && b >= 1 && a <= r && b <= c
+
+filterSurvivors :: Table -> Table
+filterSurvivors tab = filter (\p -> countNeighbours tab p == 2 || countNeighbours tab p == 3) tab
+
+calculateBirths :: Table -> Int -> Int -> Table
+calculateBirths tab r c = [p | p <- nub (concatMap (neighbs r c) tab),
+                               p `notElem` tab,
+                               countNeighbours tab p == 3]
+
+evalStep :: Table -> Int -> Int -> Table
+evalStep tab r c = filterSurvivors tab ++ calculateBirths tab r c
 
 execStep :: MonadAC m => m ()
 execStep = do tab <- getTable
               e <- getEpoch
               c <- getCols
               r <- getRows
-              let newTable = step tab c r
+              let newTable = evalStep tab r c
               modify (\s -> if newTable == tab
                             then s {isHalted = True}
                             else s {epoch = e + 1, table = newTable})

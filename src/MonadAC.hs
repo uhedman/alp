@@ -4,16 +4,16 @@
 module MonadAC (
   AC,
   runAC,
-  runEmptyAC,
   printAC,
   printStrAC,
-  setLastFile,
-  getLastFile,
   getTable,
+  setBoard,
+  clearBoard,
   getRows,
   getCols,
   getEpoch,
   getIsHalted,
+  setIsHalted,
   catchErrors,
   MonadAC,
   module Control.Monad.Except,
@@ -38,6 +38,12 @@ printStrAC = liftIO . putStr
 getTable :: MonadAC m => m Table
 getTable = gets table
 
+setBoard :: MonadAC m => (Table, Int, Int) -> m ()
+setBoard (tab, r, c) = modify (\s -> s {table = tab, rows = r, cols = c, epoch = 0, isHalted = False})
+
+clearBoard :: MonadAC m => m ()
+clearBoard = modify (\s -> s {table = [], epoch = 0})
+
 setCols :: MonadAC m => Int -> m ()
 setCols n = modify (\s -> s {cols = n})
 
@@ -56,11 +62,8 @@ getEpoch = gets epoch
 getIsHalted :: MonadAC m => m Bool
 getIsHalted = gets isHalted
 
-setLastFile :: MonadAC m => FilePath -> m ()
-setLastFile filename = modify (\s -> s {lfile = filename})
-
-getLastFile :: MonadAC m => m FilePath
-getLastFile = gets lfile
+setIsHalted :: MonadAC m => Bool -> m ()
+setIsHalted b = modify (\s -> s {isHalted = b})
 
 catchErrors  :: MonadAC m => m a -> m (Maybe a)
 catchErrors c = catchError (Just <$> c)
@@ -72,14 +75,8 @@ type AC = StateT GlEnv (ExceptT Error IO)
 -- | Esta es una instancia vacía, ya que 'MonadAC' no tiene funciones miembro.
 instance MonadAC AC
 
-runAC' :: AC a -> IO (Either Error (a, GlEnv))
-runAC' c = runExceptT $ runStateT c initialEnvEmpty
+runAC' :: AC a -> (Table, Int, Int) -> IO (Either Error (a, GlEnv))
+runAC' c tab = runExceptT $ runStateT c (initialEnv tab)
 
-runAC:: AC a -> IO (Either Error a)
-runAC c = fmap fst <$> runAC' c 
-
-runEmptyAC' :: AC a -> IO (Either Error (a, GlEnv))
-runEmptyAC' c = runExceptT $ runStateT c initialEnvEmpty
-
-runEmptyAC:: AC a -> IO (Either Error a)
-runEmptyAC c = fmap fst <$> runEmptyAC' c 
+runAC:: AC a -> (Table, Int, Int) -> IO (Either Error a)
+runAC c tab = fmap fst <$> runAC' c tab
