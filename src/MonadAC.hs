@@ -6,6 +6,7 @@ module MonadAC (
   runAC,
   printAC,
   printStrAC,
+  getGame,
   getTable,
   setBoard,
   clearBoard,
@@ -13,7 +14,6 @@ module MonadAC (
   getCols,
   getEpoch,
   getIsHalted,
-  setIsHalted,
   catchErrors,
   MonadAC,
   module Control.Monad.Except,
@@ -21,11 +21,12 @@ module MonadAC (
  where
 
 import Global
+    ( initialEnv, GlEnv(isHalted, table, cols, rows, epoch, game) )
 import Errors ( Error(..) )
 import Control.Monad.State
 import Control.Monad.Except
-import System.IO
-import Lang
+import System.IO ( stderr, hPrint )
+import Lang ( Table, Game )
 
 class (MonadIO m, MonadState GlEnv m, MonadError Error m) => MonadAC m where
 
@@ -34,6 +35,9 @@ printAC = liftIO . putStrLn
 
 printStrAC :: MonadAC m => String -> m ()
 printStrAC = liftIO . putStr
+
+getGame :: MonadAC m => m Game
+getGame = gets game
 
 getTable :: MonadAC m => m Table
 getTable = gets table
@@ -61,9 +65,6 @@ getEpoch = gets epoch
 
 getIsHalted :: MonadAC m => m Bool
 getIsHalted = gets isHalted
-
-setIsHalted :: MonadAC m => Bool -> m ()
-setIsHalted b = modify (\s -> s {isHalted = b})
 
 catchErrors  :: MonadAC m => m a -> m (Maybe a)
 catchErrors c = catchError (Just <$> c)

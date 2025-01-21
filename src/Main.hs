@@ -24,7 +24,7 @@ import Data.List (dropWhileEnd)
 import Control.Concurrent (threadDelay)
 
 prompt :: String
-prompt = "gameoflife> "
+prompt = "ac> "
 
 main :: IO ()
 main = do
@@ -35,21 +35,34 @@ main = do
 setup :: (MonadAC m, MonadMask m) => InputT m ()
 setup = do
        liftIO $ putStrLn $ unlines
-        [ "   ______                     ____  ______    _ ____   "
-        , "  / ____/___ _____ ___  ___  / __ \\/ __/ /   (_) __/__"
-        , " / / __/ __ `/ __ `__ \\/ _ \\/ / / / /_/ /   / / /_/ _ \\"
-        , "/ /_/ / /_/ / / / / / /  __/ /_/ / __/ /___/ / __/  __/"
-        , "\\____/\\__,_/_/ /_/ /_/\\___/\\____/_/ /_____/_/_/  \\___/ "
-        , "==============================================================="
+        [ "      .o.                       .                                             .                      "
+        , "     .888.                    .o8                                           .o8                      "
+        , "    .8\"888.     oooo  oooo  .o888oo  .ooooo.  ooo. .oo.  .oo.    .oooo.   .o888oo  .oooo.    .oooo.o "
+        , "   .8' `888.    `888  `888    888   d88' `88b `888P\"Y88bP\"Y88b  `P  )88b    888   `P  )88b  d88(  \"8 "
+        , "  .88ooo8888.    888   888    888   888   888  888   888   888   .oP\"888    888    .oP\"888  `\"Y88b.  "
+        , " .8'     `888.   888   888    888 . 888   888  888   888   888  d8(  888    888 . d8(  888  o.  )88b "
+        , "o88o     o8888o  `V88V\"V8P'   \"888\" `Y8bod8P' o888o o888o o888o `Y888\"\"8o   \"888\" `Y888\"\"8o 8\"\"888P' "
+        , "                                                                                                     "
+        , "                                                                                                     "
+        , "  .oooooo.             oooo              oooo                                                        "
+        , " d8P'  `Y8b            `888              `888                                                        "
+        , "888           .ooooo.   888  oooo  oooo   888   .oooo.   oooo d8b  .ooooo.   .oooo.o                 "
+        , "888          d88' `88b  888  `888  `888   888  `P  )88b  `888\"\"8P d88' `88b d88(  \"8                 "
+        , "888          888ooo888  888   888   888   888   .oP\"888   888     888ooo888 `\"Y88b.                  "
+        , "`88b    ooo  888    .o  888   888   888   888  d8(  888   888     888    .o o.  )88b                 "
+        , " `Y8bood8P'  `Y8bod8P' o888o  `V88V\"V8P' o888o `Y888\"\"8o d888b    `Y8bod8P' 8\"\"888P'                 "
+        , "                                                                                                     "
+        , "======================================================================================================"
         , "Comandos disponibles:"
         , "  start            - Inicia la simulación indefinida"
         , "  step             - Simula una época"
         , "  clear            - Limpia el tablero"
-        , "  R/K x y          - Revive o mata una célula en (x, y)"
+        , "  put c x y        - Escribe un carácter c en (x, y)"
         , "  resize r c       - Cambia las dimensiones del tablero a r x c"
         , "  load archivo     - Carga un tablero"
         , "  quit             - Salir del juego"
-        , "==============================================================="
+        , "  play game        - Cambia el juego"
+        , "======================================================================================================"
         , "¡Diviértete jugando!"
         ]
        printTable
