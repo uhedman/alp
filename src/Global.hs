@@ -1,19 +1,19 @@
 module Global where
-import Lang ( Table, Game )
-import Games ( oneDimension )
+import Lang ( Table, Game, Boundary (Open) )
+import Games ( gameOfLife )
+import Data.Maybe (fromMaybe)
 
 data GlEnv = GlEnv {
   game :: Game,
+  boundary :: Boundary,
   table :: Table,
   rows :: Int,
   cols :: Int,
   epoch :: Int,
-  isHalted :: Bool
+  isHalted :: Bool,
+  lastFile :: FilePath
 }
 
 -- | Valor del estado inicial
-initialEnv :: (Table, Int, Int) -> GlEnv
-initialEnv (t, nRows, nCols) = GlEnv oneDimension t nRows nCols 0 False
-
-emptyTable :: (Table, Int, Int)
-emptyTable = ([], 6, 6)
+initialEnv :: (Maybe FilePath, Maybe Game, Maybe Boundary) -> GlEnv
+initialEnv (f, g, b) = GlEnv (fromMaybe gameOfLife g) (fromMaybe Open b) [] 6 6 0 False (fromMaybe "" f)

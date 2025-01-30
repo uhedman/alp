@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use <$>" #-}
 
-module Parse (runP, P, parseSet, program) where
+module Parse (runP, P, parsePut, parseResize, program) where
 
 import Prelude hiding ( const )
 import Text.Parsec hiding (State, runP,parse)
@@ -59,16 +59,21 @@ tyIdentifier = Tok.lexeme lexer $ do
 -- Parser
 -----------------------
 
-cell :: P (Maybe Char)
-cell = (do l <- satisfy (/= ' ')
-           return (Just l)) <|> (space >> return Nothing)
+cell :: [Char] -> P (Maybe Char)
+cell lang = (do l <- oneOf lang
+                return (Just l)) <|> (space >> return Nothing)
 
-set :: P (Pos, State)
-set = do l <- letter
+put :: P (Pos, State)
+put = do l <- satisfy (/= ' ')
          whiteSpace
          x <- natural
          y <- natural
          return ((x,y), l)
+
+resize :: P (Int, Int)
+resize = do x <- natural
+            y <- natural
+            return (x,y)
 
 border :: P Int
 border = do char '+'
@@ -77,12 +82,12 @@ border = do char '+'
             whiteSpace
             return (length line)
 
-row :: Int -> P [(Int, State)]
-row ncols = do char '|'
-               line <- count ncols cell
-               char '|'
-               whiteSpace
-               return $ removeEmpty $ zip [1..] line
+row :: Int -> [Char] -> P [(Int, State)]
+row ncols lang = do char '|'
+                    line <- count ncols (cell lang)
+                    char '|'
+                    whiteSpace
+                    return $ removeEmpty $ zip [1..] line
   where
     removeEmpty :: [(Int, Maybe State)] -> [(Int, State)]
     removeEmpty = map (second fromJust) . filter (\(_, v) -> isJust v)
@@ -91,17 +96,20 @@ row ncols = do char '|'
 runP :: P a -> String -> String -> Either ParseError a
 runP p s filename = runParser (whiteSpace *> p <* eof) () filename s
 
-parseSet :: String -> Either ParseError (Pos, State)
-parseSet s = runP set s ""
+parsePut :: String -> Either ParseError (Pos, State)
+parsePut s = runP put s ""
+
+parseResize :: String -> Either ParseError (Int, Int)
+parseResize s = runP resize s ""
 
 -- | Parser de programas
-program :: P (Table, Int, Int)
-program = do ncols <- border
-             rows <- many1 $ row ncols
-             border
-             whiteSpace
-             let positions = concatMap (\(r, cols) -> [((r, c), s) | (c, s) <- cols]) $ zip [1..] rows
-             return (positions, length rows, ncols)
+program :: [Char] -> P (Table, Int, Int)
+program lang = do ncols <- border
+                  rows <- many1 $ row ncols lang
+                  border
+                  whiteSpace
+                  let positions = concatMap (\(r, cols) -> [((r, c), s) | (c, s) <- cols]) $ zip [1..] rows
+                  return (positions, length rows, ncols)
 
 -----------------------
 -- Funciones auxiliares

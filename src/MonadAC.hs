@@ -6,12 +6,18 @@ module MonadAC (
   runAC,
   printAC,
   printStrAC,
+  setGame,
   getGame,
+  setBoundary,
+  getBoundary,
+  getLastFile,
+  setLastFile,
   getTable,
   setBoard,
   clearBoard,
   getRows,
   getCols,
+  resize,
   getEpoch,
   getIsHalted,
   catchErrors,
@@ -21,12 +27,12 @@ module MonadAC (
  where
 
 import Global
-    ( initialEnv, GlEnv(isHalted, table, cols, rows, epoch, game) )
+    ( initialEnv, GlEnv(isHalted, table, cols, rows, epoch, game, boundary, lastFile) )
 import Errors ( Error(..) )
 import Control.Monad.State
 import Control.Monad.Except
 import System.IO ( stderr, hPrint )
-import Lang ( Table, Game )
+import Lang ( Table, Game, Boundary )
 
 class (MonadIO m, MonadState GlEnv m, MonadError Error m) => MonadAC m where
 
@@ -36,8 +42,23 @@ printAC = liftIO . putStrLn
 printStrAC :: MonadAC m => String -> m ()
 printStrAC = liftIO . putStr
 
+setGame :: MonadAC m => Game -> m ()
+setGame g = modify (\s -> s {game = g})
+
 getGame :: MonadAC m => m Game
 getGame = gets game
+
+setBoundary :: MonadAC m => Boundary -> m ()
+setBoundary b = modify (\s -> s {boundary = b})
+
+getBoundary :: MonadAC m => m Boundary
+getBoundary = gets boundary
+
+setLastFile :: MonadAC m => FilePath -> m ()
+setLastFile f = modify (\s -> s {lastFile = f})
+
+getLastFile :: MonadAC m => m FilePath
+getLastFile = gets lastFile
 
 getTable :: MonadAC m => m Table
 getTable = gets table
@@ -60,6 +81,9 @@ setRows n = modify (\s -> s {rows = n})
 getRows :: MonadAC m => m Int
 getRows = gets rows
 
+resize :: MonadAC m => Int -> Int -> m ()
+resize r c = modify (\s' -> s' {rows = r, cols = c})
+
 getEpoch :: MonadAC m => m Int
 getEpoch = gets epoch
 
@@ -76,8 +100,8 @@ type AC = StateT GlEnv (ExceptT Error IO)
 -- | Esta es una instancia vacía, ya que 'MonadAC' no tiene funciones miembro.
 instance MonadAC AC
 
-runAC' :: AC a -> (Table, Int, Int) -> IO (Either Error (a, GlEnv))
-runAC' c tab = runExceptT $ runStateT c (initialEnv tab)
+runAC' :: AC a -> (Maybe FilePath, Maybe Game, Maybe Boundary) -> IO (Either Error (a, GlEnv))
+runAC' c settings = runExceptT $ runStateT c (initialEnv settings)
 
-runAC:: AC a -> (Table, Int, Int) -> IO (Either Error a)
-runAC c tab = fmap fst <$> runAC' c tab
+runAC:: AC a -> (Maybe FilePath, Maybe Game, Maybe Boundary) -> IO (Either Error a)
+runAC c settings = fmap fst <$> runAC' c settings
