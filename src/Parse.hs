@@ -13,6 +13,7 @@ import Text.ParserCombinators.Parsec.Language
 import Lang
 import Data.Maybe (fromJust, isJust)
 import Data.Bifunctor (second)
+import qualified Data.Map.Strict as Map
 
 type P = Parsec String ()
 
@@ -109,7 +110,7 @@ program lang = do ncols <- border
                   border
                   whiteSpace
                   let positions = concatMap (\(r, cols) -> [((r, c), s) | (c, s) <- cols]) $ zip [1..] rows
-                  return (positions, length rows, ncols)
+                  return (Map.fromList positions, length rows, ncols)
 
 -----------------------
 -- Funciones auxiliares

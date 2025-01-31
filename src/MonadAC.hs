@@ -33,6 +33,7 @@ import Control.Monad.State
 import Control.Monad.Except
 import System.IO ( stderr, hPrint )
 import Lang ( Table, Game, Boundary )
+import Data.Map.Strict as Map
 
 class (MonadIO m, MonadState GlEnv m, MonadError Error m) => MonadAC m where
 
@@ -67,7 +68,7 @@ setBoard :: MonadAC m => (Table, Int, Int) -> m ()
 setBoard (tab, r, c) = modify (\s -> s {table = tab, rows = r, cols = c, epoch = 0, isHalted = False})
 
 clearBoard :: MonadAC m => m ()
-clearBoard = modify (\s -> s {table = [], epoch = 0})
+clearBoard = modify (\s -> s {table = Map.empty, epoch = 0})
 
 setCols :: MonadAC m => Int -> m ()
 setCols n = modify (\s -> s {cols = n})

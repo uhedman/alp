@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 module Games where
 import Lang (Game, Orientation (..), State, Neighbour)
+import Data.List (isPrefixOf)
 
 -- AC para game of life
 gameOfLife :: Game
@@ -50,28 +51,42 @@ langton = (['█', '^', '>', 'v', '<', 'N', 'E', 'S', 'W'], f, "Langton's Ant")
 -- AC para el automata de una dimension a lo largo del tiempo
 rule18 :: Game
 rule18 = (['█'], f, "Regla 18")
-  where f ' ' n | (NW, '█') `elem` n && (N, '█') `elem` n && (NE, '█') `elem` n = ' '
-                | (NW, '█') `elem` n && (N, '█') `elem` n && (NE, ' ') `elem` n = ' '
-                | (NW, '█') `elem` n && (N, ' ') `elem` n && (NE, '█') `elem` n = ' '
-                | (NW, '█') `elem` n && (N, ' ') `elem` n && (NE, ' ') `elem` n = '█'
-                | (NW, ' ') `elem` n && (N, '█') `elem` n && (NE, '█') `elem` n = ' '
-                | (NW, ' ') `elem` n && (N, '█') `elem` n && (NE, ' ') `elem` n = ' '
-                | (NW, ' ') `elem` n && (N, ' ') `elem` n && (NE, '█') `elem` n = '█'
-                | (NW, ' ') `elem` n && (N, ' ') `elem` n && (NE, ' ') `elem` n = ' '
+  where f ' ' n | [(NW, '█'), (N, '█'), (NE, '█')] `isPrefixOf` n = ' '
+                | [(NW, '█'), (N, '█'), (NE, ' ')] `isPrefixOf` n = ' '
+                | [(NW, '█'), (N, ' '), (NE, '█')] `isPrefixOf` n = ' '
+                | [(NW, '█'), (N, ' '), (NE, ' ')] `isPrefixOf` n = '█'
+                | [(NW, ' '), (N, '█'), (NE, '█')] `isPrefixOf` n = ' '
+                | [(NW, ' '), (N, '█'), (NE, ' ')] `isPrefixOf` n = ' '
+                | [(NW, ' '), (N, ' '), (NE, '█')] `isPrefixOf` n = '█'
+                | [(NW, ' '), (N, ' '), (NE, ' ')] `isPrefixOf` n = ' '
                 | otherwise = ' '
         f '█' _ = '█'
 
 -- AC para el automata de una dimension a lo largo del tiempo
 rule30 :: Game
 rule30 = (['█'], f, "Regla 30")
-  where f ' ' n | (NW, '█') `elem` n && (N, '█') `elem` n && (NE, '█') `elem` n = ' '
-                | (NW, '█') `elem` n && (N, '█') `elem` n && (NE, ' ') `elem` n = ' '
-                | (NW, '█') `elem` n && (N, ' ') `elem` n && (NE, '█') `elem` n = ' '
-                | (NW, '█') `elem` n && (N, ' ') `elem` n && (NE, ' ') `elem` n = '█'
-                | (NW, ' ') `elem` n && (N, '█') `elem` n && (NE, '█') `elem` n = '█'
-                | (NW, ' ') `elem` n && (N, '█') `elem` n && (NE, ' ') `elem` n = '█'
-                | (NW, ' ') `elem` n && (N, ' ') `elem` n && (NE, '█') `elem` n = '█'
-                | (NW, ' ') `elem` n && (N, ' ') `elem` n && (NE, ' ') `elem` n = ' '
+  where f ' ' n | [(NW, '█'), (N, '█'), (NE, '█')] `isPrefixOf` n = ' '
+                | [(NW, '█'), (N, '█'), (NE, ' ')] `isPrefixOf` n = ' '
+                | [(NW, '█'), (N, ' '), (NE, '█')] `isPrefixOf` n = ' '
+                | [(NW, '█'), (N, ' '), (NE, ' ')] `isPrefixOf` n = '█'
+                | [(NW, ' '), (N, '█'), (NE, '█')] `isPrefixOf` n = '█'
+                | [(NW, ' '), (N, '█'), (NE, ' ')] `isPrefixOf` n = '█'
+                | [(NW, ' '), (N, ' '), (NE, '█')] `isPrefixOf` n = '█'
+                | [(NW, ' '), (N, ' '), (NE, ' ')] `isPrefixOf` n = ' '
+                | otherwise = ' '
+        f '█' _ = '█'
+
+-- AC para el automata de una dimension a lo largo del tiempo
+rule184 :: Game
+rule184 = (['█'], f, "Regla 30")
+  where f ' ' n | [(NW, '█'), (N, '█'), (NE, '█')] `isPrefixOf` n = '█'
+                | [(NW, '█'), (N, '█'), (NE, ' ')] `isPrefixOf` n = ' '
+                | [(NW, '█'), (N, ' '), (NE, '█')] `isPrefixOf` n = '█'
+                | [(NW, '█'), (N, ' '), (NE, ' ')] `isPrefixOf` n = '█'
+                | [(NW, ' '), (N, '█'), (NE, '█')] `isPrefixOf` n = '█'
+                | [(NW, ' '), (N, '█'), (NE, ' ')] `isPrefixOf` n = ' '
+                | [(NW, ' '), (N, ' '), (NE, '█')] `isPrefixOf` n = ' '
+                | [(NW, ' '), (N, ' '), (NE, ' ')] `isPrefixOf` n = ' '
                 | otherwise = ' '
         f '█' _ = '█'
 

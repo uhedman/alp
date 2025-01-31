@@ -21,7 +21,7 @@ import Errors (Error(ParseErr))
 import Data.List (dropWhileEnd, isPrefixOf, intercalate)
 import Control.Concurrent (threadDelay, forkIO, killThread)
 import System.IO (hPutStrLn, stderr, hSetBuffering, stdin, BufferMode (NoBuffering))
-import Games (gameOfLife, langton, rule18, briansBrain, seeds, dayAndNight, rule30)
+import Games (gameOfLife, langton, rule18, seeds, briansBrain, dayAndNight, rule30, rule184) 
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import System.IO.Unsafe (unsafePerformIO)
 
@@ -74,6 +74,7 @@ setup = do
         , "    - langton"
         , "    - rule18"
         , "    - rule30"
+        , "    - rule184"
         , "    - seeds"
         , "  set boundary tipo   - Selecciona el tipo de frontera:"
         , "    - open (default)"
@@ -278,7 +279,7 @@ commBound s = case parseBoundary s of
 
 parseArgs :: [String] -> (Maybe FilePath, Maybe Game, Maybe Boundary)
 parseArgs [] = (Nothing, Nothing, Nothing)
-parseArgs ("-f":f:xs) = let (file, g, b) = parseArgs xs in (Just f, g, b)
+parseArgs ("-f":f:xs) = let (_, g, b) = parseArgs xs in (Just f, g, b)
 parseArgs ("-g":g:xs) = let (f, _, b) = parseArgs xs in (f, parseAutomaton g, b)
 parseArgs ("-b":b:xs) = let (f, g, _) = parseArgs xs in (f, g, parseBoundary b)
 parseArgs (_:xs) = parseArgs xs
@@ -292,6 +293,7 @@ parseAutomaton g = do
     "langton" -> Just langton
     "rule18" -> Just rule18
     "rule30" -> Just rule30
+    "rule184" -> Just rule184
     "seeds" -> Just seeds
     _ -> Nothing
 

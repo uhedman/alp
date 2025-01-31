@@ -13,12 +13,13 @@ import Prettyprinter
     Doc,
     Pretty(pretty) )
 import MonadAC hiding (State)
+import qualified Data.Map.Strict as Map
 
 -- | Pretty printer para el tablero
 t2doc :: Table -> Int -> Int -> Doc AnsiStyle
 t2doc table r c =
   let border = '+' : replicate c '-' ++ "+"
-      matrix = [[lookup (i,j) table | j <- [1 .. c]] | i <- [1 .. r]]
+      matrix = [[Map.lookup (i,j) table | j <- [1 .. c]] | i <- [1 .. r]]
       separatedList = map (("|" ++) . (++ "|") . concatMap cell2doc) matrix
   in pretty $ unlines $ [border] ++ separatedList ++ [border]
 

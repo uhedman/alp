@@ -1,7 +1,8 @@
 module Lang where
+import qualified Data.Map.Strict as Map
 
 type Pos = (Int, Int)
-type Table = [(Pos, State)]
+type Table = Map.Map Pos State
 
 type State = Char
 type Neighbour = (Orientation, State)

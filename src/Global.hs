@@ -2,6 +2,7 @@ module Global where
 import Lang ( Table, Game, Boundary (Open) )
 import Games ( gameOfLife )
 import Data.Maybe (fromMaybe)
+import Data.Map.Strict as Map
 
 data GlEnv = GlEnv {
   game :: Game,
@@ -16,4 +17,4 @@ data GlEnv = GlEnv {
 
 -- | Valor del estado inicial
 initialEnv :: (Maybe FilePath, Maybe Game, Maybe Boundary) -> GlEnv
-initialEnv (f, g, b) = GlEnv (fromMaybe gameOfLife g) (fromMaybe Open b) [] 6 6 0 False (fromMaybe "" f)
+initialEnv (f, g, b) = GlEnv (fromMaybe gameOfLife g) (fromMaybe Open b) Map.empty 6 6 0 False (fromMaybe "" f)

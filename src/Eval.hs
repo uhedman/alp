@@ -1,82 +1,81 @@
 module Eval ( execSet, execStep ) where
 import MonadAC
-    ( getCols, getEpoch, getRows, getTable, getGame, modify, MonadAC, printAC, getBoundary )
+    ( getCols, getEpoch, getRows, getTable, getGame, modify, MonadAC, getBoundary )
 import Lang ( Pos, Table, State, Neighbour, Orientation (..), Boundary (..) )
 import Global ( GlEnv(table, isHalted, epoch) )
-import Data.Maybe (fromMaybe)
-import Data.List (nub)
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
 execSet :: MonadAC m => (Pos, State) -> m ()
 execSet (pos, state) = do
   r <- getRows
   c <- getCols
-  if isInBound r c pos 
-  then do tab <- getTable
-          let newEntry = (pos, state)
-              updatedTable = newEntry : filter (\(p, _) -> p /= pos) tab
-          modify (\s -> s {table = updatedTable, isHalted = False})
-  else printAC "Put fuera del tablero."
-
-isInBound :: Int -> Int -> Pos -> Bool
-isInBound rows cols (a, b) = a >= 1 && b >= 1 && a <= rows && b <= cols
+  do tab <- getTable
+     let newEntry = (pos, state)
+         updatedTable = Map.insert pos state tab
+     modify (\s -> s {table = updatedTable, isHalted = False})
+  
+execStep :: MonadAC m => m ()
+execStep = do 
+  tab <- getTable
+  e <- getEpoch
+  rows <- getRows
+  cols <- getCols
+  (_, f, _) <- getGame
+  bound <- getBoundary
+  let newTable = evalStep f bound tab rows cols
+  modify (\s -> if newTable == tab
+                then s {isHalted = True}
+                else s {epoch = e + 1, table = newTable})
 
 evalStep :: (State -> [Neighbour] -> State) -> Boundary -> Table -> Int -> Int -> Table
-evalStep f bound tab rows cols = filter (\(_, s) -> s /= ' ') (map processCell cells)
+evalStep f bound tab rows cols = 
+    foldr (\pos acc -> let value = f (lookupState pos) (neighboursWithStates pos)
+                       in if value == ' ' 
+                          then acc
+                          else Map.insert pos value acc) Map.empty cells
   where
-    -- Celdas que hay que procesar
-    cells :: [Pos]
-    cells = nub (concatMap (neighbs . fst) tab)
+    cells :: Set.Set Pos
+    cells = foldMap (Set.fromList . neighboursPositions) (Map.keys tab)
 
-    -- Esta función procesará cada celda de la tabla.
-    processCell :: Pos -> (Pos, State)
-    processCell pos = (pos, f (lookupState pos) (neighbours pos))
-
-    neighbs :: Pos -> [Pos]
-    neighbs (r, c) = case bound of
+    neighboursPositions :: Pos -> [Pos]
+    neighboursPositions (r, c) = case bound of
           Closed -> filter inbounds positions
           Open -> positions
-          Periodic -> map per positions
+          Periodic -> map periodic positions
           Reflective -> filter inbounds positions
       where
       positions = [(r-1, c-1), (r-1, c), (r-1, c+1),
-                  (r, c-1),   (r, c),   (r, c+1),
-                  (r+1, c-1), (r+1, c), (r+1, c+1)]
+                   (r, c-1),   (r, c),   (r, c+1),
+                   (r+1, c-1), (r+1, c), (r+1, c+1)]
       
-      inbounds = isInBound rows cols
+    neighboursWithStates :: Pos -> [Neighbour]
+    neighboursWithStates (r, c) = case bound of
+        Closed -> map (\(dir, pos) -> (dir, lookupState pos)) closedNeighbours
+        Open -> map (\(dir, pos) -> (dir, lookupState pos)) openNeighbours
+        Periodic -> map (\(dir, pos) -> (dir, lookupState (periodic pos))) openNeighbours
+        Reflective -> map (\(dir, pos) -> (dir, lookupState (reflect pos))) openNeighbours
+      where
+        openNeighbours =
+          [(NW, (r-1, c-1)), (N, (r-1, c)), (NE, (r-1, c+1)),
+           (W, (r, c-1)),                   (E, (r, c+1)),
+           (SW, (r+1, c-1)), (S, (r+1, c)), (SE, (r+1, c+1))]
+        
+        closedNeighbours = filter (inbounds . snd) openNeighbours
 
-    neighbours :: Pos -> [Neighbour]
-    neighbours (r, c) = 
-      case bound of
-        Closed -> [(NW, lookupState (r-1, c-1)), (N, lookupState (r-1, c)), (NE, lookupState (r-1, c+1)),
-                   (W, lookupState (r, c-1)),                               (E, lookupState (r, c+1)),
-                   (SW, lookupState (r+1, c-1)), (S, lookupState (r+1, c)), (SE, lookupState (r+1, c+1))]
-        Open -> [(NW, lookupState (r-1, c-1)), (N, lookupState (r-1, c)), (NE, lookupState (r-1, c+1)),
-                 (W, lookupState (r, c-1)),                               (E, lookupState (r, c+1)),
-                 (SW, lookupState (r+1, c-1)), (S, lookupState (r+1, c)), (SE, lookupState (r+1, c+1))]
-        Periodic -> [(NW, lookupState (per (r-1, c-1))), (N, lookupState (per (r-1, c))), (NE, lookupState (per (r-1, c+1))),
-                     (W, lookupState (per (r, c-1))),                                     (E, lookupState (per (r, c+1))),
-                     (SW, lookupState (per (r+1, c-1))), (S, lookupState (per (r+1, c))), (SE, lookupState (per (r+1, c+1)))]
-        Reflective -> [(NW, lookupState (max 1 (r-1), max 1 (c-1))),    (N, lookupState (max 1 (r-1), c)),    (NE, lookupState (max 1 (r-1), min cols (c+1))),
-                       (W, lookupState (r, max 1 (c-1))),                                                     (E, lookupState (r, min cols (c+1))),
-                       (SW, lookupState (min rows (r+1), max 1 (c-1))), (S, lookupState (min rows (r+1), c)), (SE, lookupState (min rows (r+1), min cols (c+1)))]
-
-    -- Función para obtener el estado de una celda dada (usando la tabla original).
     lookupState :: Pos -> State
-    lookupState pos = fromMaybe ' ' (lookup pos tab)
+    lookupState pos = Map.findWithDefault ' '  pos tab
     
-    per :: Pos -> Pos
-    per (x, y) = let x' = ((x - 1) `mod` rows) + 1
-                     y' = ((y - 1) `mod` cols) + 1
-                 in (x', y')
+    inbounds :: Pos -> Bool
+    inbounds = isInBound rows cols
+    
+    periodic :: Pos -> Pos
+    periodic (x, y) = let x' = ((x - 1) `mod` rows) + 1
+                          y' = ((y - 1) `mod` cols) + 1
+                      in (x', y')
 
-execStep :: MonadAC m => m ()
-execStep = do tab <- getTable
-              e <- getEpoch
-              rows <- getRows
-              cols <- getCols
-              (_, f, _) <- getGame
-              bound <- getBoundary
-              let newTable = evalStep f bound tab rows cols
-              modify (\s -> if newTable == tab
-                            then s {isHalted = True}
-                            else s {epoch = e + 1, table = newTable})
+    reflect :: Pos -> Pos
+    reflect (x, y) = (min rows (max 1 x), min cols (max 1 y))
+
+isInBound :: Int -> Int -> Pos -> Bool
+isInBound rows cols (a, b) = a >= 1 && b >= 1 && a <= rows && b <= cols
