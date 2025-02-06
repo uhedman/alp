@@ -3,7 +3,7 @@ module Games where
 import Lang (Game, Orientation (..), State, Neighbour)
 import Data.List (isPrefixOf)
 
--- AC para game of life
+-- AC para Greenberg Hastings Model
 gameOfLife :: Game
 gameOfLife = (['█'], f, "Conway's Game of Life")
   where f ' ' n = if count '█' n == 3 then '█' else ' '
@@ -26,10 +26,31 @@ dayAndNight = (['█'], f, "Day & Night")
         f '█' n = let ln = count '█' n
                   in if ln == 3 || ln == 4 || ln == 6 || ln == 7 || ln == 8 then '█' else ' '
 
+-- AC para Greenberg Hastings Model
+ghmodel :: Game
+ghmodel = (['█','·'], f, "Greenberg Hastings Model")
+  where f '█' n = '·'
+        f '·' n = ' '
+        f ' ' n | (N, '█') `elem` n || (E, '█') `elem` n || (S, '█') `elem` n || (W, '█') `elem` n = '█'
+                | otherwise = ' '
+
+maze :: Game
+maze = (['█', ' '], f, "Maze")
+  where f '█' n = let ln = count '█' n
+                  in if 1 <= ln && ln <= 4 then '█' else ' '
+        f ' ' n = if count '█' n == 3 then '█' else ' '
+        
+mazectric :: Game
+mazectric = (['█', ' '], f, "Mazectric")
+  where f '█' n = let ln = count '█' n
+                  in if 1 <= ln && ln <= 5 then '█' else ' '
+        f ' ' n = if count '█' n == 3 then '█' else ' '
+
 -- AC para la hormiga de langton
 langton :: Game
 langton = (['█', '^', '>', 'v', '<', 'N', 'E', 'S', 'W'], f, "Langton's Ant")
-  where f ' ' n | (N, '>') `elem` n || (N, 'W') `elem` n = 'v'
+  where f :: Char -> [(Orientation, Char)] -> Char
+        f ' ' n | (N, '>') `elem` n || (N, 'W') `elem` n = 'v'
                 | (E, 'v') `elem` n || (E, 'N') `elem` n = '<'
                 | (S, '<') `elem` n || (S, 'E') `elem` n = '^'
                 | (W, '^') `elem` n || (W, 'S') `elem` n = '>'
@@ -90,6 +111,18 @@ rule184 = (['█'], f, "Regla 30")
                 | otherwise = ' '
         f '█' _ = '█'
 
+sand :: Game
+sand = (['█', '-'], f, "Falling Sand Model")
+  where f :: Char -> [(Orientation, Char)] -> Char
+        f ' ' n | (N, '█') `elem` n = '█'
+                | (NE, '█') `elem` n && (E, '█') `elem` n && ((SE, '-') `elem` n || (SE, '█') `elem` n) = '█'
+                | (NW, '█') `elem` n && (W, '█') `elem` n && ((SW, '-') `elem` n || (SW, '█') `elem` n) = '█'
+                | otherwise = ' '
+        f '█' n | (S, ' ') `elem` n = ' '
+                | (N, '█') `elem` n && ((S, '-') `elem` n || (S, '█') `elem` n) && ((E, ' ') `elem` n || (W, ' ') `elem` n) = ' '
+                | otherwise = '█'
+        f '-' _ = '-'
+
 -- AC para seeds
 seeds :: Game
 seeds = (['█'], f, "Seeds")
@@ -98,7 +131,6 @@ seeds = (['█'], f, "Seeds")
         f '█' _ = ' '
 
 -- Funciones auxiliares
-
 count :: State -> [Neighbour] -> Int
 count c [] = 0
 count c ((_,x):xs) | c == x = 1 + count c xs
