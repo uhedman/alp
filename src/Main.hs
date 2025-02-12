@@ -21,7 +21,7 @@ import Errors (Error(ParseErr))
 import Data.List (dropWhileEnd, isPrefixOf, intercalate)
 import Control.Concurrent (threadDelay, forkIO, killThread)
 import System.IO (hPutStrLn, stderr, hSetBuffering, stdin, BufferMode (NoBuffering))
-import Games (gameOfLife, langton, rule18, seeds, briansBrain, dayAndNight, rule30, rule184, ghmodel, sand, maze, mazectric) 
+import Games (gameOfLife, langton, rule18, seeds, briansBrain, dayAndNight, rule30, rule90, rule184, ghmodel, sand, maze, mazectric) 
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import System.IO.Unsafe (unsafePerformIO)
 
@@ -77,6 +77,7 @@ setup = do
         , "    - mazectric"
         , "    - rule18"
         , "    - rule30"
+        , "    - rule90"
         , "    - rule184"
         , "    - sand"
         , "    - seeds"
@@ -300,6 +301,7 @@ parseAutomaton g = do
     "mazectric" -> Just mazectric
     "rule18" -> Just rule18
     "rule30" -> Just rule30
+    "rule90" -> Just rule90
     "rule184" -> Just rule184
     "sand" -> Just sand
     "seeds" -> Just seeds

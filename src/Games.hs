@@ -98,8 +98,22 @@ rule30 = (['█'], f, "Regla 30")
         f '█' _ = '█'
 
 -- AC para el automata de una dimension a lo largo del tiempo
+rule90 :: Game
+rule90 = (['█'], f, "Regla 90")
+  where f ' ' n | [(NW, '█'), (N, '█'), (NE, '█')] `isPrefixOf` n = ' '
+                | [(NW, '█'), (N, '█'), (NE, ' ')] `isPrefixOf` n = '█'
+                | [(NW, '█'), (N, ' '), (NE, '█')] `isPrefixOf` n = ' '
+                | [(NW, '█'), (N, ' '), (NE, ' ')] `isPrefixOf` n = '█'
+                | [(NW, ' '), (N, '█'), (NE, '█')] `isPrefixOf` n = '█'
+                | [(NW, ' '), (N, '█'), (NE, ' ')] `isPrefixOf` n = ' '
+                | [(NW, ' '), (N, ' '), (NE, '█')] `isPrefixOf` n = '█'
+                | [(NW, ' '), (N, ' '), (NE, ' ')] `isPrefixOf` n = ' '
+                | otherwise = ' '
+        f '█' _ = '█'
+
+-- AC para el automata de una dimension a lo largo del tiempo
 rule184 :: Game
-rule184 = (['█'], f, "Regla 30")
+rule184 = (['█'], f, "Regla 184")
   where f ' ' n | [(NW, '█'), (N, '█'), (NE, '█')] `isPrefixOf` n = '█'
                 | [(NW, '█'), (N, '█'), (NE, ' ')] `isPrefixOf` n = ' '
                 | [(NW, '█'), (N, ' '), (NE, '█')] `isPrefixOf` n = '█'
